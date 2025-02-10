@@ -2,6 +2,8 @@ from gpt_researcher import GPTResearcher
 import aisuite as ai
 import asyncio
 from dotenv import load_dotenv, find_dotenv
+import requests
+import bs4
 
 async def get_report(query: str, report_type: str):
     researcher = GPTResearcher(query, report_type,max_subtopics=1)
@@ -67,6 +69,21 @@ def write_report_to_file(filepath: str, report: str, context: str, costs: dict,
         file.write(str(len(images)) + "\n\n")
         file.write("Number of Research Sources:\n")
         file.write(str(len(sources)) + "\n\n")
+
+def scrape_pages(urls: list[str]) -> list[str]:
+    # Corrected function to scrape pages from a list of URLs
+    pages = []
+    for url in urls:
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            soup = bs4.BeautifulSoup(response.text, "html.parser")
+            paragraphs = soup.find_all("p")
+            text = "\n\n".join(p.get_text() for p in paragraphs)
+            pages.append(text)
+        except Exception as e:
+            print(f"Error scraping {url}: {e}")
+    return pages
 
 if __name__ == "__main__":
 

@@ -372,20 +372,23 @@ if __name__ == "__main__":
         else:
             sort_by_choice = scrap["sortBy"]
 
-        query_folder = os.path.join(json_folder,"{id}/")
+        query_folder = os.path.join(json_folder,f"{id}/")
         os.makedirs(query_folder, exist_ok=True)
 
         today = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
 
         output_file = f'{query_folder}/{today}-{days}.json'
+        print(os.path.exists(output_file))
         cfg_file = f'{query_folder}/{today}-{days}_config.json'
 
         if os.path.exists(cfg_file):
             with open(cfg_file, 'r') as f:
                 cfg = json.load(f)
-            if 'max_results' and 'sortBy' not in cfg:
-                 cfg['max_results'] = max_results
-                 cfg['sortBy'] = sort_by_choice
+                print("cfg : ",cfg)
+            if 'max_results' not in cfg:
+                cfg['max_results'] = max_results
+            if 'sortBy' not in cfg:
+                cfg['sortBy'] = sort_by_choice
 
             if (cfg['query'] == query and cfg['category'] == category 
                 and cfg['filter_query'] == filter_query 
@@ -395,7 +398,6 @@ if __name__ == "__main__":
                 and cfg['sortBy'] == sort_by_choice
                 ):
                 print(f"Skipping {id} as it has already been scraped today.")
-                continue
             else: # create a new instance
                 with open(cfg_file.replace(".json","_new.json"), 'w') as f:
                     json.dump(scrap, f, indent=4)
@@ -412,6 +414,8 @@ if __name__ == "__main__":
         # Format in Markdown
         import md_format as mdf
         md_file_path = f'{md_folder}/{id}/{today}-{days}.md'
+        with open(output_file, 'r') as f:
+            out_dict = json.load(f)
         if os.path.exists(md_file_path):
             print(f"Skipping {id} as it has already been formatted today.")
         else:

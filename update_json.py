@@ -2,6 +2,7 @@ import os
 import json
 import re
 from typing import List, Dict
+import md_format as mdf
 
 def extract_titles_from_markdown(markdown_path: str) -> List[str]:
     """Extract all titles from markdown file."""
@@ -64,7 +65,7 @@ def sync_markdown_json(root_folder: str):
 
         for file in files:
             json_path = os.path.join(input_folder, folder, file)
-            json_archive = os.path.join(input_folder, folder,"archive", file)
+            json_archive = os.path.join(input_folder,"archive", file)
             markdown_path = os.path.join(markdown_folder, folder, file.replace('.json', ' clean.md'))
             output_json_path = os.path.join(input_folder, folder, file.replace('.json', '_clean.json'))
         
@@ -76,14 +77,20 @@ def sync_markdown_json(root_folder: str):
                     print(f"Remaining papers: {metrics['remaining_papers']}")
                     print(f"Removed papers: {metrics['removed_papers']}")
                     # Move JSON file to archive
-                    os.replace(json_path, json_archive)
-                    print(f"Moved {file} to archive")
+                    try:
+                        os.replace(json_path, json_archive)
+                        print(f"Moved {file} to archive")
+                    except Exception as e:
+                        print(f"Error moving file to archive: {str(e)}")
+                    with open(output_json_path, 'r', encoding='utf-8') as f:
+                        papers = json.load(f)
+                    mdf.list_to_markdown(papers, markdown_path.replace(' clean.md', '_clean.md'))
             else:
                 if not os.path.exists(json_path):
                     print(f"JSON file not found: {json_path}")
                 if not os.path.exists(markdown_path):
                     print(f"Markdown file not found: {markdown_path}")
-
+            
 # Add to main execution
 if __name__ == "__main__":
     root_folder = "../Knowledge"

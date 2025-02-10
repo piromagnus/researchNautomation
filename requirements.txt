@@ -1,0 +1,14 @@
+pdfminer.six
+gpt_researcher
+aisuite[all]
+python-dotenv
+matplotlib
+numpy
+requests
+sentence-transformers
+scikit-learn
+arxiv
+pymupdf4llm
+pymupdf
+ollama
+smolagents

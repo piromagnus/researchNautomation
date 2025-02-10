@@ -62,7 +62,7 @@ def add_scatter_plot(papers, md_file, output_file):
 
 
 
-def list_to_markdown(papers: List[Dict], output_file: str,aisummary=True):
+def list_to_markdown(papers: List[Dict], output_file: str,ai_summary=True):
     """
     Converts a list of paper dictionaries to a Markdown file with detailed information.
 
@@ -117,7 +117,7 @@ def list_to_markdown(papers: List[Dict], output_file: str,aisummary=True):
             {"role": "system", "content": "You are a helpful assistant that creates concise summaries of academic papers in computer vision. You will only give the summary and nothing before nor any explaination of what it is. You will be concise without long sentences. You will use short group of words"},
             {"role": "user", "content": f"Please summarize the following abstract in 50 words:\n\n{abstract}"}
             ]
-            if aisummary:
+            if ai_summary:
                 response = client_llm.chat.completions.create(
                     model=model,
                     messages=messages,
