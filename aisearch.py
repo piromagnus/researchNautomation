@@ -6,7 +6,7 @@ import requests
 import bs4
 
 async def get_report(query: str, report_type: str):
-    researcher = GPTResearcher(query, report_type,max_subtopics=1)
+    researcher = GPTResearcher(query, report_type,max_subtopics=3)
     research_result = await researcher.conduct_research()
     report = await researcher.write_report()
     
@@ -137,7 +137,7 @@ if __name__ == "__main__":
             ]
             
     response = client.chat.completions.create(
-        model="ggenai:gemini-2.0-flash-exp",
+        model="ggenai:gemini-2.0-flash-thinking-exp-01-21",
         messages=messages,
         temperature=0.7
     )

@@ -58,7 +58,7 @@ def add_scatter_plot(papers, md_file, output_file):
 
     
     md_file.write(f"\n## Score Scatter Plot\n")
-    md_file.write(f"![[{output_image_path[3:]}]]\n\n")
+    md_file.write(f"![[{output_filename}]]\n\n")
 
 
 

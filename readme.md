@@ -41,6 +41,7 @@ There are two environment configuration files:
 
 - Clone the repository.
 - Install the dependencies listed in requirements.txt.
+- Install the aisuite fork with ```cd packages/aisuite && pip install .```
 <!-- - Install Ollama for Local LLM. -->
 - Update the .env and .ai.env files with your credentials.
 - Run the desired script (e.g., aisearch.py, summary.py) as needed.

@@ -1,6 +1,6 @@
 pdfminer.six
 gpt_researcher
-aisuite[all]
+# aisuite[all]
 python-dotenv
 matplotlib
 numpy
@@ -12,3 +12,4 @@ pymupdf4llm
 pymupdf
 ollama
 smolagents
+docstring_parser

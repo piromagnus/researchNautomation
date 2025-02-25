@@ -7,12 +7,8 @@ import aisuite as ai
 from dotenv import load_dotenv, find_dotenv
 from pdf_extract import extract_texts_from_folder,extract_single_pdf
 import base64
-
-
-
-
-
-
+import subprocess  # added import for subprocess
+# from pdf_minerU import parse_md
 
 # def process_md_files(input_folder, output_folder,template_folder,figures_folder,rules,tags,
 #  model_name="openai:gpt-4o-2024-11-20"):
@@ -109,7 +105,7 @@ import base64
 def process_single_md(
     file_path: str,
     vault_path: str,
-    figures_path: str,
+    loc_figures_path: str,
     output_folder: str,
     template_folder : str,
     client: ai.Client,
@@ -126,6 +122,16 @@ def process_single_md(
         # quit()
         output_filename = "Paper - " + Path(filename).stem + '.md'
         output_path = os.path.join(output_folder, output_filename)
+
+        full_figures_path = os.path.join(vault_path,loc_figures_path)
+        os.makedirs(full_figures_path, exist_ok=True)
+        img_listdir = os.listdir(full_figures_path)
+        #sort
+        img_listdir.sort()
+        for img in img_listdir:
+            full_img_path = os.path.join(full_figures_path,img)
+            client.upload_file(full_img_path)
+
         if os.path.exists(output_path):
             # If the output file already exists, skip processing this Markdown file
             print("Already processed:", filename)
@@ -200,14 +206,10 @@ def process_single_md(
         
 
         #add the link in the format [[figures_folder/name]] based on the os.lisdir
-        figures_path = os.path.join(figures_path,filename.split(".")[0])
-        full_figures_path = os.path.join(vault_path,figures_path)
-        os.makedirs(full_figures_path, exist_ok=True)
-        listdir = os.listdir(full_figures_path)
-        #sort
-        listdir.sort()
-        for figure in listdir:
-            analysis = analysis + "\n ![[" + figures_path + "/" + figure + "]] \n"
+        # figures_path = os.path.join(figures_path,filename.split(".")[0])
+        
+        for figure in img_listdir:
+            analysis = analysis + "\n ![[" + loc_figures_path + "/" + figure + "]] \n"
 
 
 
@@ -245,14 +247,24 @@ if __name__ == "__main__":
     if file_name is not None and not file_name.endswith(".pdf"):
         print("Please provide a pdf file")
         exit(0)
+    local_extract_folder ="Knowledge/automation/extract"
 
     root_folder=os.path.join(vault_path,"Knowledge/automation")
+    
     pdf_folder = os.path.join(root_folder,"PDF_inbox")
     
-    extract_folder = os.path.join(root_folder,"pdf_raw")
+    
+    extract_folder = os.path.join(vault_path,local_extract_folder)
+    
     output = os.path.join(root_folder,"Processed_pdf")
     
-    figures_path = os.path.join(extract_folder,"figures") # path to the figures relative to the vault_path
+    os.makedirs(root_folder, exist_ok=True)
+    os.makedirs(output, exist_ok=True)
+    os.makedirs(extract_folder, exist_ok=True)
+    os.makedirs(pdf_folder, exist_ok=True)
+
+    figures_path = os.path.join(extract_folder,"images") # path to the figures relative to the vault_path
+    os.makedirs(figures_path, exist_ok=True)
     # model_name = "athene-v2" #"qwen2.5:32b" #"llama3.1:latest" #
     template_model = os.path.join(vault_path,"Templates/summary.md")
     #with opena
@@ -260,7 +272,7 @@ if __name__ == "__main__":
     # model_name = "anthropic:claude-3-5-sonnet-20241022"    
     # model_name = "deepseek:deepseek-reasoner"
     # model_name = "deepseek:deepseek-chat"
-    model_name = "ggenai:gemini-exp-1206"
+    # model_name = "ggenai:gemini-2.0-pro-exp-02-05"
     model_name = "ggenai:gemini-2.0-flash-exp"
 
 
@@ -294,6 +306,9 @@ if __name__ == "__main__":
         "Use either foundation if it a paper on a backbone or fine-tuning if it is a paper that only use pretrained backbone",
         "Use either Transformers, CNN, SSM or Other",
         "Describe the tasks that is done by the paper with at least 1 tags in the ["+ ", ".join(tasks_tags)+"] list "
+        "To illustrate the concept, You MUST use the images that are provided in the input with the caption in the format ![[images_path]] \n Figure i : Caption"
+        "You will always use the same caption as the one in the input"
+        "You will add all the figures with there caption under a # Figures title at the end of the file including images and tables."
     ]
 
     tags = [
@@ -307,35 +322,46 @@ if __name__ == "__main__":
             "Fondation",
             "Fine-Tuning",
         ]
-    
-    
+   
+    base_filename = os.path.basename(file_name)
+    no_suff_filename = base_filename.split(".")[0]
+    current_local_extract_folder = os.path.join(local_extract_folder,no_suff_filename,no_suff_filename,"auto")
+    folder_extracted=os.path.join(vault_path,current_local_extract_folder)
+    figures_path = os.path.join(current_local_extract_folder,"images")
+    os.makedirs(figures_path, exist_ok=True)
+    os.makedirs(folder_extracted, exist_ok=True)
     # print( ", ".join(tags))
     if args.direct and model_name.split(":")[0] == "anthropic":
-        base_filename = os.path.basename(file_name)
         filepath=os.path.join(extract_folder,base_filename).replace(".pdf",".md")
         pdf_path = os.path.join(vault_path,file_name)
         process_single_md(filepath,vault_path,figures_path,output,template_model,client,tags,model_name,pdf_file=pdf_path)
         print("Processed - done")
         quit()
-
-
-
+    
     if file_name:
-        filepath=os.path.join(vault_path,file_name)
-        extract_single_pdf(filepath,figures_folder=figures_path,output_folder=extract_folder,table_dir=args.tab)
+        # filepath=os.path.join(vault_path,file_name)
+        # extract_single_pdf(filepath,figures_folder=figures_path,output_folder=extract_folder,table_dir=args.tab)
+        scripts_folder = os.path.dirname(os.path.realpath(__file__))
+        output_folder = os.path.join(local_extract_folder,os.path.basename(file_name).replace(".pdf",""))
+        full_filename = os.path.join(folder_extracted,no_suff_filename+".md")
+        print("full_filename",full_filename)
+        if os.path.exists(full_filename):
+            print("Already extracted")
+        else:  
+            subprocess.run(["bash",f"{scripts_folder}/run_minerU.sh", file_name, output_folder], check=True)
     else:
         extract_texts_from_folder(pdf_folder, extract_folder)
 
     if file_name:
-        base_filename = os.path.basename(file_name)
-        filepath=os.path.join(extract_folder,base_filename).replace(".pdf",".md")
+        
+        filepath = os.path.join(folder_extracted,no_suff_filename+".md")
+        os.makedirs(figures_path, exist_ok=True)
+
         process_single_md(filepath,vault_path,figures_path,output,template_model,client,tags,model_name)
+
     else:
         print("Error: No file provided")
         # process_md_files(extract_folder, output,template_model,figures_path,rules,tags,model_name)
 
     print("Processed - done")
-
-
-
 
