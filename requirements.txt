@@ -13,3 +13,5 @@ pymupdf
 ollama
 smolagents
 docstring_parser
+git+https://github.com/piromagnus/aisuite.git#egg=aisuite[all]
+mermaid-py

@@ -1,0 +1,20 @@
+graph LR
+    RL[Reinforcement Learning] --> PO[Policy Optimization]
+    PO --> PGM[Policy Gradient Methods]
+    PGM -- Instability --> TRPO[Trust Region Policy Optimization (TRPO)]
+    PGM -- Instability --> PPO[Proximal Policy Optimization (PPO)]
+    TRPO -- "Constrained 2nd Order" and "Robustness" --> TRPO_Adv["Ensures Monotonic Improvement"]
+    TRPO --> TRPO_Cons["Complex and Less Efficient"]
+    PPO -- "Clipped Surrogate" and "1st Order" --> PPO_Adv["Efficient and Simple"]
+    PPO --> PPO_Cons["Less Theoretical Guarantee"]
+    PPO -- Modification --> SPO[Simple Policy Optimization (SPO)]
+    SPO -- "Modified PPO Loss" and "1st Order" --> SPO_Adv["Efficient and Simple"]
+    SPO -- "Enhanced Stability" and "Better Ratio Constraint" --> SPO_Theo["Improved Theoretical Properties"]
+    SPO --> SPO_Goal["Balance Robustness and Efficiency"]
+    SPO_Goal --> SPO_PotAdv["Potentially Outperforms TRPO and PPO"]
+    classDef concept fill:#f9f,stroke:#333,stroke-width:2px
+    class RL,PO,PGM,TRPO,PPO,SPO concept
+    classDef advantage fill:#ccf,stroke:#333,stroke-width:1px,stroke-dasharray: 5 5
+    class TRPO_Adv,PPO_Adv,SPO_Adv,SPO_Theo,SPO_Goal,SPO_PotAdv advantage
+    classDef disadvantage fill:#fcc,stroke:#333,stroke-width:1px,stroke-dasharray: 5 5
+    class TRPO_Cons,PPO_Cons disadvantage

@@ -130,7 +130,7 @@ def process_single_md(
         img_listdir.sort()
         for img in img_listdir:
             full_img_path = os.path.join(full_figures_path,img)
-            client.upload_file(full_img_path)
+            client.upload.upload_file(full_img_path,model_name.split(":")[0])
 
         if os.path.exists(output_path):
             # If the output file already exists, skip processing this Markdown file
@@ -208,6 +208,7 @@ def process_single_md(
         #add the link in the format [[figures_folder/name]] based on the os.lisdir
         # figures_path = os.path.join(figures_path,filename.split(".")[0])
         
+        analysis = analysis + "\n# Figures\n"
         for figure in img_listdir:
             analysis = analysis + "\n ![[" + loc_figures_path + "/" + figure + "]] \n"
 
@@ -273,7 +274,7 @@ if __name__ == "__main__":
     # model_name = "deepseek:deepseek-reasoner"
     # model_name = "deepseek:deepseek-chat"
     # model_name = "ggenai:gemini-2.0-pro-exp-02-05"
-    model_name = "ggenai:gemini-2.0-flash-exp"
+    model_name = "genai:gemini-2.0-flash-exp"
 
 
 

@@ -275,7 +275,7 @@ def process_arxiv_papers(query, category, filter_query,negative_query,sort_by_ch
     for paper in negative_papers:
         normalized_positive = (paper['positive_score'] - score_threshold) / (1 - score_threshold)
         # normalized_negative = (paper['negative_score'] - min_negative_score) / (max_negative_score - min_negative_score) if max_negative_score != min_negative_score else 0
-        paper['general_score'] = (normalized_positive + paper['negative_score'])/2
+        paper['general_score'] = (paper['positive_score'] + paper['negative_score'])/2
 
 
 

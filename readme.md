@@ -1,6 +1,20 @@
 Vault Scripts Repository
 This repository contains a collection of Python scripts for automating research workflows, paper summaries, and data synchronization.
 
+
+# Quick Start
+## MinerU 
+1. Build the docker image:
+```bash
+docker build -t mineru:latest .
+```
+2. Run the docker container:
+```bash
+  bash run_minerU.sh <filepath> <output_dir>
+```
+
+
+
 # Key Files
 
 - aisearch.py  

@@ -4,6 +4,8 @@ import asyncio
 from dotenv import load_dotenv, find_dotenv
 import requests
 import bs4
+from utils import open_obsi_file
+from create_mermaid import validate_diagram
 
 async def get_report(query: str, report_type: str):
     researcher = GPTResearcher(query, report_type,max_subtopics=3)
@@ -18,18 +20,11 @@ async def get_report(query: str, report_type: str):
     
     return report, research_context, research_costs, research_images, research_sources
 
+
+
 def get_md_query(prompt:str,file_path: str) -> str:
-    with open(file_path, "r") as file:
-        content = file.read()
-    
-    # Split by --- and get the content after frontmatter
-    parts = content.split("---")
-    if len(parts) >= 3:
-        # Take everything after the second '---'
-        query = "---".join(parts[2:]).strip()
-    else:
-        # If no proper frontmatter, return the whole content
-        query = content.strip()
+    query = open_obsi_file(file_path)
+
     filename = os.path.basename(file_path).replace(".md","")
     client = ai.Client()
     messages = [
@@ -38,7 +33,7 @@ def get_md_query(prompt:str,file_path: str) -> str:
             ]
             
     response = client.chat.completions.create(
-        model="ollama:llama3.1:8b",
+        model="ollama:phi4",
         messages=messages,
         temperature=0.7
     )
@@ -137,15 +132,17 @@ if __name__ == "__main__":
             ]
             
     response = client.chat.completions.create(
-        model="ggenai:gemini-2.0-flash-thinking-exp-01-21",
+        model="genai:gemini-2.0-flash-thinking-exp-01-21",
         messages=messages,
         temperature=0.7
     )
-
     summary = response.choices[0].message.content
+    # ask the model to provide a mermaid diagram of the concepts
 
-    report = summary + "\n\n" + report
+    diagram = "```mermaid\n"+ validate_diagram(report) +"```"
 
+
+    report = summary + "\n\n" + diagram + "\n\n" + report
 
     report_filepath = get_report_filepath(file_path)
     write_report_to_file(report_filepath, report, context, costs, images, sources)
