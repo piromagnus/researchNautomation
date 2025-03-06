@@ -4,6 +4,8 @@ This repository contains a collection of Python scripts for automating research 
 
 # Quick Start
 ## MinerU 
+MinerU is a tool designed to automate the processing of a pdf and turn it into markdown. It gets all the layouts, including images, latex formula and tables.  
+ See [minerU](https://github.com/opendatalab/MinerU) for more information.
 1. Build the docker image:
 ```bash
 docker build -t mineru:latest .
