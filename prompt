@@ -1,3 +1,0 @@
-For now the table look like this | Methods | AP | AP50 | AP75 | | :---: | :---: | :---: | :---: | | HRNet-w48[13] | 55.8 | 67.4 | 59.0 | | Ours | 98.3 | 99.5 | 99.1 |
-in the epub. 
-Add a function to turn it into a html table. Do it step by step to understand the question and then to give a plan and implement it.
