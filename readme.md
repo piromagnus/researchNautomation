@@ -11,7 +11,8 @@ MinerU is a tool designed to automate the processing of a pdf and turn it into m
 ```bash
 docker build -t mineru:latest .
 ```
-2. Run the docker container:
+2. Modify the ROOT_DIR in the run_minerU.sh to adapt at your architecture containing our pdf. The filepath will be relative to this root dir.
+3. Run the docker container:
 ```bash
   bash run_minerU.sh <filepath> <output_dir>
 ```

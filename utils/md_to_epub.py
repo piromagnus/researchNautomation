@@ -15,7 +15,7 @@ import hashlib
 # from PIL import Image  # Moved up since it's used in process_images
 from ebooklib import epub
 from datetime import datetime
-from epub_utils import style
+from .epub_utils import style
 
 # Import latex conversion libraries
 try:
@@ -245,11 +245,11 @@ def process_markdown_for_epub(content, base_dir):
     content = re.sub(r'(?m)^\|(.+\|)+$\n\|[-:| ]+\|\n((?:\|.+\|\n?)+)', replace_markdown_table, content)
     
     # Convert HTML tables to markdown
-    def replace_html_table(match):
-        return convert_html_table_to_markdown(match.group(0))
+    # def replace_html_table(match):
+    #     return convert_markdown_table_to_html(convert_html_table_to_markdown(match.group(0)))
     
-    # Convert HTML tables first
-    content = re.sub(r'<table>.*?</table>', replace_html_table, content, flags=re.DOTALL)
+    # # Convert HTML tables first
+    # content = re.sub(r'<table>.*?</table>', replace_html_table, content, flags=re.DOTALL)
     
     # Convert LaTeX formulas to SVG
     content, svg_refs = process_latex_formulas(content, base_dir)
@@ -453,7 +453,7 @@ def format_metadata_tags(metadata):
     return metadata_html
 
 
-def markdown_to_epub(full_text_path, summary_path, output_path=None, title=None, author='AI Assistant'):
+def markdown_to_epub(full_text_path, summary_path, output_path=None, title=None, author=None):
     """Convert markdown files to EPUB."""
     base_dir = os.path.dirname(os.path.abspath(full_text_path))
     print(base_dir)
@@ -470,7 +470,7 @@ def markdown_to_epub(full_text_path, summary_path, output_path=None, title=None,
         title = extract_title_from_content(full_text)
         if title is None:
             title = os.path.basename(full_text_path).split('.')[0]
-    
+
     if summary_metadata['authors']:
         author = ', '.join(summary_metadata['authors'])
     
@@ -555,7 +555,7 @@ def markdown_to_epub(full_text_path, summary_path, output_path=None, title=None,
     full_content = f'''<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
 <head>
     <title>Full Content</title>
-    <link rel="stylesheet" type="text/css" href="style/style.css" />
+   <link rel="stylesheet" type="text/css" href="style/style.css" />
 </head>
 <body>
     <h1>Full Paper</h1>
@@ -571,6 +571,15 @@ def markdown_to_epub(full_text_path, summary_path, output_path=None, title=None,
     
     book.add_item(summary_chapter)
     book.add_item(content_chapter)
+    
+    # Add CSS style
+    style_item = epub.EpubItem(
+        uid="style_css",
+        file_name="style/style.css",
+        media_type="text/css",
+        content=style
+    )
+    book.add_item(style_item)
     
     for img in image_references:
         try:
@@ -606,6 +615,7 @@ def markdown_to_epub(full_text_path, summary_path, output_path=None, title=None,
     nav_content = '''<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
 <head>
     <title>Navigation</title>
+    <link rel="stylesheet" type="text/css" href="style/style.css" />
 </head>
 <body>
     <nav epub:type="toc" id="toc">
