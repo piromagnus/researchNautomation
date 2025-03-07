@@ -83,6 +83,7 @@ pip install -r requirements.txt
 ```bash
 cp .env.example .env
 ```
+3. Modify the .env also to setup the path of your structure. As the command doesn't ask input everything is setup in the .env. You will also require a query file that will contains the differents settings of each newsletter. see [demo](demo/demo_query.md) for an example. You can add as many queries as you want using a different title as a name. The script will fetch the papers from arxiv and filter them with the queries in the config file.
 
 
 ### Run
