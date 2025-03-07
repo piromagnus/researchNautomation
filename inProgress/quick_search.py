@@ -3,7 +3,7 @@ import argparse
 
 import aisuite as ai
 from dotenv import load_dotenv
-from prompts import *
+from scripts.inProgress.prompts import *
 import wikipedia
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity

@@ -1,8 +1,9 @@
 from dotenv import load_dotenv
-from utils import open_obsi_file
+from utils.io import open_obsi_file
 import aisuite as ai
 from pathlib import Path
 import os
+import time
 
 request_prompt = """
 "<report>\n{}\n<report>\n 
@@ -147,7 +148,7 @@ if __name__ == "__main__":
 
     #TODO add a query in the concepts vault to get more information about the topic
 
-    import time
+
 
     load_dotenv(".ai.env")
     import argparse

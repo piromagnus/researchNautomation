@@ -334,6 +334,7 @@ if __name__ == "__main__":
     # add the number of days as arguments
     parser.add_argument("days",type=int, default=8, help='Number of days to consider for paper filtering.')
     args = parser.parse_args()
+    
     days = args.days+1
     max_results= 1000
     sort_by_choice = "lastUdpated"#"relevance"
@@ -412,7 +413,7 @@ if __name__ == "__main__":
                 json.dump(scrap, f, indent=4,  default=str)
         
         # Format in Markdown
-        import md_format as mdf
+        import scripts.utils.md_format as mdf
         md_file_path = f'{md_folder}/{id}/{today}-{days}.md'
         with open(output_file, 'r') as f:
             out_dict = json.load(f)

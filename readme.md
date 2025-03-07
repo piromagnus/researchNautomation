@@ -16,7 +16,80 @@ docker build -t mineru:latest .
   bash run_minerU.sh <filepath> <output_dir>
 ```
 
+## Install the dependencies
+```bash
+pip install -r requirements.txt
+```
 
+
+## AiSearch
+Based on [GPT-Researcher](https://github.com/assafelovic/gpt-researcher). It get the content of a markdown file and generate a report on it with the help of a LLM and search on Internet with [Tavily](https://tavily.com/).
+
+To run it
+```bash
+python aisearch.py <dir_path> <markdown_file> <report_type>
+```
+report_type is
+`"research_report" | "resource_report" | "outline_report"|  "custom_report"|  "detailed_report"|  "subtopic_report"`
+more details in [GPT-Researcher](https://github.com/assafelovic/gpt-researcher)
+
+It will append the report to the markdown file and generate a log report in the same directory under `report` folder.
+
+it can be using in Obsidian with the plugin python scripter adding a argument for the report type and passing Vault path and active file path.
+
+You must file the ai.env file (using the example file) with the API keys for Gemini (default) and Tavily.
+For small query, Ollama is used by default but if you have less memory you can try to use a smaller LLM though it will produce less accurate results.
+
+For gemini you can get free api access on [aistudio](https://aistudio.google.com/).
+
+You can change model in aisearch but take care GPT-Researcher use lanchain-llm models that can be incompatible with aisuite. (eg: google-genai vs genai)
+
+## Summary
+The summary.py script is designed to process PDF documents and Markdown files, generating summaries and extracting relevant tags. It can also compile detailed analyses of academic papers.
+I use [minerU](https://github.com/opendatalab/MinerU) to extract the pdf and then I use aisuite to generate the summary.
+
+### Setup
+1. Ensure you have the required dependencies installed. You can do this by running:
+```bash
+pip install -r requirements.txt
+```
+2. Build the Docker image for MinerU:
+```bash
+docker build -t mineru:latest .
+```
+3. Modify the .env to add you API Keys for Gemini or any other LLM you want to use.  
+   You can use the example file (.env.example) as a starting point:  
+```bash
+cp .env.example .env
+```
+4. Modify the utils/summary_path.py to setup the path of your structure. All the paths are relative to the vault_path from the command line.
+5. Modify the utils/summary_prompt to adapt the prompt to your needs. By default there is a set of tags, tasks and rules to follow. It is mostly setup of computer vision but you can adapt it to your needs.
+6. You need to give a template for the summary. You can use the example file [demo](demo/demo_template.md) as a starting point. The first part, of the file is some metadata in an Obsidian format so you can change it if you need.
+
+### To run
+
+```bash
+python summary.py <vault_path> <markdown_path>
+```
+## Scrap arxiv
+The scrapt_arxiv.py script is designed to fetch recent papers from arXiv using specific queries. It performs relevance scoring, GitHub repository detection, and data filtering to ensure the retrieved papers are relevant to your research interests.
+### Setup
+1. Ensure you have the required dependencies installed. You can do this by running:
+```bash
+pip install -r requirements.txt
+```
+2. Modify the .env file to add your API Keys for OpenAI, Anthropic, Tavily, DeepSeek, and Gemini.  
+   You can use the example file (.env.example) as a starting point:  
+```bash
+cp .env.example .env
+```
+
+
+### Run
+```bash
+python scrapt_arxiv.py <nb_days>
+```
+with nb_days is the number of days you want to go back in the past. It will fetch all the papers from arxiv in the last nb_days days and filter them with the queries in the config file.
 
 # Key Files
 
@@ -28,8 +101,7 @@ docker build -t mineru:latest .
   Provides functions to format Markdown reports including generating ASCII histograms and scatter plots visualizing paper score distributions.
 - scrapt_arxiv.py  
   Fetches recent papers from arXiv using queries and performs relevance scoring, GitHub repository detection, and data filtering.
-- pdf-extract.py  
-  Contains functions to extract text and images from PDF files using pdfminer.
+
 
 # Environment Setup
 
@@ -39,10 +111,12 @@ There are two environment configuration files:
    Contains API keys and configuration for various services (OpenAI, Anthropic, Tavily, DeepSeek, Gemini).  
    You can use the example file (.env.example) as a starting point:  
    cp .env.example .env  
+   **Mostly used for arxiv_scrap.py and summary.py**
 2. .ai.env  
    Contains AI API endpoints and model configurations such as OpenAI and Ollama.  
    Similarly, use .ai.env.example as your template:  
-   cp .ai.env.example .ai.env  
+   cp .ai.env.example .ai.env 
+    **Mostly used for aisearch.py**
 
    ## .ai.env Information
    - OPENAI_API_KEY, OPENAI_API_BASE: API key and base URL for OpenAI services.

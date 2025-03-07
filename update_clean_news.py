@@ -2,7 +2,7 @@ import os
 import json
 import re
 from typing import List, Dict
-import md_format as mdf
+import utils.md_format as mdf
 
 def extract_titles_from_markdown(markdown_path: str) -> List[str]:
     """Extract all titles from markdown file."""

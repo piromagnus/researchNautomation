@@ -4,8 +4,12 @@ import asyncio
 from dotenv import load_dotenv, find_dotenv
 import requests
 import bs4
-from utils import open_obsi_file
-from create_mermaid import validate_diagram
+from utils.io import open_obsi_file
+from utils.create_mermaid import validate_diagram
+
+
+
+
 
 async def get_report(query: str, report_type: str):
     researcher = GPTResearcher(query, report_type,max_subtopics=3)
@@ -33,7 +37,7 @@ def get_md_query(prompt:str,file_path: str) -> str:
             ]
             
     response = client.chat.completions.create(
-        model="ollama:phi4",
+        model=os.getenv("QUERY_LLM"),
         messages=messages,
         temperature=0.7
     )
@@ -138,8 +142,12 @@ if __name__ == "__main__":
     )
     summary = response.choices[0].message.content
     # ask the model to provide a mermaid diagram of the concepts
-
-    diagram = "```mermaid\n"+ validate_diagram(report) +"```"
+    diagram =  validate_diagram(report)
+    if diagram is None:
+        print("Diagram generation failed")
+        diagram = "No diagram generated"
+    else:
+        diagram = "```mermaid\n"+diagram +"```"
 
 
     report = summary + "\n\n" + diagram + "\n\n" + report
