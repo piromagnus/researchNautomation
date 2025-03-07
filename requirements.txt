@@ -15,3 +15,9 @@ smolagents
 docstring_parser
 git+https://github.com/piromagnus/aisuite.git#egg=aisuite[all]
 mermaid-py
+markdown
+EbookLib
+latex2mathml
+git+https://github.com/Moonbase59/latex2svg.git#egg=latex2svg
+Pillow
+scour

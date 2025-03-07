@@ -1,0 +1,68 @@
+
+    body {
+        font-family: Calibri, Arial, sans-serif;
+        margin: 5%;
+        line-height: 1.6;
+    }
+    h1, h2, h3, h4, h5, h6 {
+        font-family: Calibri, Arial, sans-serif;
+        margin-top: 2em;
+        margin-bottom: 1em;
+    }
+    code {
+        font-family: Consolas, monospace;
+        background-color: #f0f0f0;
+        padding: 2px 4px;
+        border-radius: 3px;
+    }
+    pre {
+        background-color: #f0f0f0;
+        padding: 10px;
+        border-radius: 5px;
+        overflow-x: auto;
+        margin: 1em 0;
+    }
+    blockquote {
+        border-left: 3px solid #ccc;
+        margin: 1em 0;
+        padding-left: 15px;
+        color: #555;
+    }
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 1em 0;
+    }
+    th, td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+    }
+    th {
+        background-color: #f2f2f2;
+    }
+    img {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 1em auto;
+    }
+    .missing-image {
+        border: 1px dashed #ccc;
+        padding: 1em;
+        text-align: center;
+        color: #999;
+        margin: 1em 0;
+    }
+    math {
+        font-size: 1.1em;
+        margin: 0.5em 0;
+    }
+    .codehilite {
+        background: #f8f8f8;
+        border-radius: 5px;
+        overflow: auto;
+        padding: 0.5em;
+        margin: 1em 0;
+    }
+    
