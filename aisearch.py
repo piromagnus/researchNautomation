@@ -147,7 +147,7 @@ if __name__ == "__main__":
         print("Diagram generation failed")
         diagram = "No diagram generated"
     else:
-        diagram = "```mermaid\n"+diagram +"```"
+        diagram = "```mermaid\n"+diagram +"\n```"
 
 
     report = summary + "\n\n" + diagram + "\n\n" + report

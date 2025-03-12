@@ -81,8 +81,24 @@ def process_single_md(
             # max_tokens=40000,
             temperature=0.5)
         analysis = response.choices[0].message.content.replace("```markdown\n","").replace("```","")
+        
         # remove the ####---#### at the end
-        analysis = analysis.split("####---####")[1]
+        try:
+            print(analysis.split("####---####")[0])
+            analysis = analysis.split("####---####")[1]
+            
+        except:
+            print("No separator found in {}".format(analysis))
+        ## remove the first lines if they are empty but not after
+        
+        analysis = analysis.split("\n")
+        # remove the first lines if they are empty but not after
+        while len(analysis)>0 and analysis[0].strip() == "":
+            analysis = analysis[1:]
+        analysis = "\n".join(analysis)
+
+
+        
         time_taken = time.time() - start_time
         try:
             prompt_tokens = response.usage.prompt_tokens

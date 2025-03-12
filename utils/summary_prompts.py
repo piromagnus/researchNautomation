@@ -37,6 +37,8 @@ rules = [
         "You write in Markdown format",
         "You will remove all space or tabulations on the first line after a subtitle",
         "You will use latex with $.$ or $$.$$  for math",
+        "You will write the full content of the table as it is instead of the place holder {insert the content of the table_id} at the end of the summary"
+       
     ]
 
 prompt = """ You are a helpful assistant that summarizes academic papers in computer vision. 
@@ -51,7 +53,7 @@ prompt = """ You are a helpful assistant that summarizes academic papers in comp
             2. A detailled summary of the paper, highlighting the main contributions, type of input and output data for training and inference, type of learning methods\n
             3. A detailed list of new concepts, architectures, and training methods introduced, including deep explanations of each.\n\n
             4. A detailled explanation of the training stragegy (supervised, weakly-supervised, unsupervised, reinforcement learning or something else), the dataset used, the evaluation metrics and the results\n
-
-            Think step by step, but only keep a minimum draft for each thinking step, with 5 words at most. Return the answer at the end of the response after a separator ####---####.
+            5. Finally, you will capture the task that is beeing solve by the paper in only sentence as well as the problems it is solving. be really specific and precise\n
+            Think step by step, but only keep a minimum draft for each thinking step, with 5 words at most. You will describe all your process to find the relevant element. You will start with the overall plan and then you will developp each step with at least 5 steps. Return the answer at the end of the response after a separator ####---####.
         
         """

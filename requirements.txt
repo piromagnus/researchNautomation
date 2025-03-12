@@ -1,10 +1,10 @@
 pdfminer.six
 gpt_researcher
 # aisuite[all]
-python-dotenv
+python-dotenv>=1.0.0
 matplotlib
 numpy
-requests
+requests>=2.31.0
 sentence-transformers
 scikit-learn
 arxiv
@@ -21,3 +21,4 @@ latex2mathml
 git+https://github.com/Moonbase59/latex2svg.git#egg=latex2svg
 Pillow
 scour
+beautifulsoup4>=4.12.0

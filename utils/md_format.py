@@ -10,6 +10,70 @@ from dotenv import load_dotenv, find_dotenv
 
 
 
+
+# model = "ollama:qwq:latest"
+load_dotenv(find_dotenv())
+model = os.getenv("SMALL_SUMMARY_MODEL",'ollama:phi4:latest')
+
+def get_llm_response(content, system_prompt, temperature=0.7):
+    """Generic LLM response function"""
+    client = ai.Client()
+    messages = [
+        {"role": "system", "content": system_prompt +" You always reason before anwering. You reason step by step with a maximum of 6 words per thought and you give your answer after this indicator ####---####"},
+        {"role": "user", "content": content}
+    ]
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            temperature=temperature
+        )
+        res = response.choices[0].message.content.strip().split("####---####")
+        if len(res) > 1:
+            return res[1].strip()
+        else:
+            get_llm_response(content, system_prompt, temperature)
+        return res
+    
+    except Exception as e:
+        print(f"Error in LLM call: {e}")
+        return None
+
+def get_tasks_tags(paper):
+    """Extract the main task from the paper"""
+    system_prompt = "You are a helpful assistant that extracts the task from academic papers in computer vision. You will answer only the task in a short sentence or word without anything else."
+    content = f"""
+        Analyze the research paper and identify the primary task type or research category.
+        Examples include: "Image Classification", "3D Monocular Human pose estimation"," "3D Multiview Human pose estimation", "Reinforcement Learning", etc.
+        Provide only the task type without any additional explanation or surrounding text.
+        Format your response as a single sentence.
+        \n\n{paper}
+    """
+    return get_llm_response(content, system_prompt)
+
+def get_contributions(paper):
+    """Extract the top 3 main contributions from the paper"""
+    system_prompt = "You are a helpful assistant that extracts key technical contributions from academic papers. List exactly 3 main technical contributions, each starting with a bullet point."
+    content = f"""
+        Analyze this research paper and identify the 3 most important technical contributions.
+        Be specific, concise and technical.
+        Format as bullet points.
+        \n\n{paper}
+    """
+    return get_llm_response(content, system_prompt)
+
+def get_paper_summary(paper):
+    """Generate a concise summary of the paper"""
+    system_prompt = "You are a helpful assistant that creates concise summaries of academic papers. Focus only on key innovations and technical aspects."
+    content = f"""
+        Summarize this research paper in 2-3 short sentences, focusing on:
+        - The main technical innovation
+        - The key methodology
+        - The primary results
+        \n\n{paper}
+    """
+    return get_llm_response(content, system_prompt)
+
 def add_ascii_histogram(scores, md_file):
     bins = np.arange(0, 1.1, 0.1)
     hist, _ = np.histogram(scores, bins=bins)
@@ -59,9 +123,7 @@ def add_scatter_plot(papers, md_file, output_file):
     md_file.write(f"\n## Score Scatter Plot\n")
     md_file.write(f"![[{output_filename}]]\n\n")
 
-
-
-def list_to_markdown(papers: List[Dict], output_file: str,ai_summary=True):
+def list_to_markdown(papers: List[Dict], output_file: str, ai_summary=True):
     """
     Converts a list of paper dictionaries to a Markdown file with detailed information.
 
@@ -97,7 +159,7 @@ def list_to_markdown(papers: List[Dict], output_file: str,ai_summary=True):
         add_ascii_histogram(scores, md)
         add_scatter_plot(papers, md,output_file)
         client_llm = ai.Client()
-        model = "ollama:phi4:latest"
+
         md.write(f"Total stars: {total_stars}\n\n")
         for paper in papers:
             title = paper.get('title', 'No Title')
@@ -105,27 +167,21 @@ def list_to_markdown(papers: List[Dict], output_file: str,ai_summary=True):
             abstract = paper.get('abstract', 'No Abstract')
             arxiv_link = paper.get('link', '#')
             repo_link = paper.get('repo', None)
-            
+            # print(abstract)
             negative_score = paper.get('negative_score', 'N/A')
             positive_score = paper.get('positive_score', 'N/A')
             general_score = paper.get('general_score', 'N/A')
             stars = paper.get('stars', 0)
             date_str = paper.get('date', '')
-            
-            messages = [
-            {"role": "system", "content": "You are a helpful assistant that creates concise summaries of academic papers in computer vision. You will only give the summary and nothing before nor any explaination of what it is. You will be concise without long sentences. You will use short group of words"},
-            {"role": "user", "content": f"Please summarize the following abstract in 50 words:\n\n{abstract}"}
-            ]
-            if ai_summary:
-                response = client_llm.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    temperature=0.7
-                )
-                
-                summary = response.choices[0].message.content
+
+            if ai_summary and abstract != "No Abstract" and abstract != "":
+                task = get_tasks_tags(abstract)
+                summary = get_paper_summary(abstract)
+                contributions = get_contributions(abstract)
             else:
+                task = None
                 summary = None
+                contributions = None
 
             # Extract only the date part
             try:
@@ -133,7 +189,7 @@ def list_to_markdown(papers: List[Dict], output_file: str,ai_summary=True):
             except ValueError:
                 date = "Invalid Date"
             
-        
+
             
             #md.write(f"Average stars: {avg_stars:.2f}")
 
@@ -142,10 +198,15 @@ def list_to_markdown(papers: List[Dict], output_file: str,ai_summary=True):
             authors_str = ", ".join(authors_abv)
 
             md.write(f"# {title}\n")
+            if task is not None:
+                md.write(f"**Task:** {task}\n")
+            if contributions is not None:
+                md.write(f"**Key Contributions:**\n{contributions}\n")
             md.write(f"**Authors:** {authors_str}\n")
             md.write(f"**Links:** [arXiv]({arxiv_link}) | " + repo_str)
-            md.write(f"**Score:** {general_score} | ⭐ : {stars}\n")
-            md.write(f"**Score positive:** {positive_score} |**Score negative:** {negative_score}\n")
+            if general_score != 'N/A':
+                md.write(f"**Score:** {general_score} | ⭐ : {stars}\n")
+                md.write(f"**Score positive:** {positive_score} | **Score negative:** {negative_score}\n")
             md.write(f"**Date:** {date}\n")
             if summary:
                 md.write(f"**Summary:** {summary}\n")
@@ -194,4 +255,3 @@ if __name__ == "__main__":
                     print(f"Skipping {input_file} as {output_file_name} already exists")
             else:
                 print(f"Skipping {input_file} as it's not a JSON file")
-            

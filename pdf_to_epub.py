@@ -28,7 +28,7 @@ def pdf_to_epub(pdf_path: str, output_path: str = None) -> str:
     
     
     # process_single_md(filepath,vault_path,figures_path,output,template_model,client,tags,model_name=model_name,prompt=prompt,rules=rules)
-
+    #TODO create the summary and save it in the output folder
 
     # Prepare paths for epub conversion
     full_text_path = os.path.join(full_extract_path, "auto", f"{name_without_suffix}.md")

@@ -10,6 +10,7 @@ import json
 import datetime
 import os
 from dotenv import load_dotenv, find_dotenv
+import utils.md_format as mdf
 
 def get_recent_arxiv_links_with_arxivpy(query,sort_by_choice="relevance", max_results=50):
     choice = arxiv.SortCriterion.Relevance if sort_by_choice == "relevance" else arxiv.SortCriterion.LastUpdatedDate
@@ -212,6 +213,46 @@ def filter_papers_by_date_and_category(papers, category, days=8):
     
     return filtered_papers
 
+def scrape_arxiv_papers_pipeline(query, category, sort_by_choice="lastUpdated", max_results=50, days=8):
+    """Pipeline for scraping papers from ArXiv without analysis"""
+    papers = get_recent_arxiv_links_with_arxivpy(query, sort_by_choice, max_results=max_results)
+    filtered_papers = filter_papers_by_date_and_category(papers, category, days=days)
+    return filtered_papers
+
+def analyze_papers_pipeline(papers, filter_query, negative_query, score_threshold=0.6):
+    """Pipeline for analyzing and scoring papers"""
+    # Get relevance scores
+    relevant_papers = get_relevant_papers(filter_query, papers)
+    
+    # Add GitHub information
+    for paper in relevant_papers:
+        github_urls = detect_github_repos(paper['abstract'])
+        if github_urls:
+            stars = get_github_repo_stars(github_urls[0], os.getenv("GITHUB_TOKEN"))
+            paper['repo'] = github_urls[0][:-1] if github_urls[0][-1] == "." else github_urls[0]
+        else:
+            stars = 0
+            paper['repo'] = "N/A"
+        paper['stars'] = stars
+    
+    # Filter and process scores
+    relevant_papers = [paper for paper in relevant_papers if paper['score'] >= score_threshold]
+    for paper in relevant_papers:
+        paper['positive_score'] = paper['score']
+        del paper['score']
+    
+    # Process negative scores
+    negative_papers = get_relevant_papers(negative_query, relevant_papers)
+    for paper in negative_papers:
+        paper['negative_score'] = 1 - paper['score']
+        del paper['score']
+        normalized_positive = (paper['positive_score'] - score_threshold) / (1 - score_threshold)
+        paper['general_score'] = (paper['positive_score'] + paper['negative_score'])/2
+    
+    # Sort by general score
+    negative_papers.sort(key=lambda x: x['general_score'], reverse=True)
+    return negative_papers
+
 def process_arxiv_papers(query, category, filter_query,negative_query,sort_by_choice, max_results=2000, days=8, score_threshold=0.6):
     """Processes a list of ArXiv papers based on the given query, category, and filter query. Filters the papers by date and category, selects the most relevant papers, and optionally filters them by a score threshold.
     
@@ -331,126 +372,98 @@ def parse_markdown_to_queries(markdown_file):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='Process ArXiv papers based on queries from a markdown file.')
-    # add the number of days as arguments
-    parser.add_argument("days",type=int, default=8, help='Number of days to consider for paper filtering.')
+    parser.add_argument("days", type=int, default=8, help='Number of days to consider for paper filtering.')
     args = parser.parse_args()
     
-    days = args.days+1
-    max_results= 1000
-    sort_by_choice = "lastUdpated"#"relevance"
+    days = args.days + 1
+    max_results = 1000
+    sort_by_choice = "lastUdpated"
     
     load_dotenv(find_dotenv())
-
-    root_folder=os.getenv("ROOT_FOLDER")
-    queries_file= os.path.join(root_folder,os.getenv("QUERIES_FILE"))
-    json_folder = os.path.join(root_folder,os.getenv("JSON_FOLDER"))
-    md_folder = os.path.join(root_folder,os.getenv("MD_FOLDER"))
-
+    
+    root_folder = os.getenv("ROOT_FOLDER")
+    queries_file = os.path.join(root_folder, os.getenv("QUERIES_FILE"))
+    json_folder = os.path.join(root_folder, os.getenv("JSON_FOLDER"))
+    md_folder = os.path.join(root_folder, os.getenv("MD_FOLDER"))
+    raw_folder = os.path.join(json_folder, "raw")  # New folder for raw scraped data
+    
     ai_summary = os.getenv("AI_SUMMARY", "false").lower() == "true"
-
-
+    
     os.makedirs(json_folder, exist_ok=True)
     os.makedirs(md_folder, exist_ok=True)
-
-
-    queries = parse_markdown_to_queries(queries_file)
-    print(queries)
+    os.makedirs(raw_folder, exist_ok=True)
     
+    queries = parse_markdown_to_queries(queries_file)
+    today = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
+    
+    # Phase 1: Scraping
     for scrap in queries:
         id = scrap['id']
         query = scrap['query']
         category = scrap['category']
-        filter_query = scrap['filter_query']
-        score_th = scrap['score_th']
-        negative_query = scrap['negative_query']       
-
-        if "max_results" not in scrap:
-            scrap["max_results"] = max_results
-        else:
-            max_results = int(scrap["max_results"])
-        if "sortBy" not in scrap:
-            scrap["sortBy"]=sort_by_choice
-        else:
-            sort_by_choice = scrap["sortBy"]
-
-        query_folder = os.path.join(json_folder,f"{id}/")
+        max_results = int(scrap.get("max_results", 1000))
+        sort_by_choice = scrap.get("sortBy", "lastUpdated")
+        
+        query_folder = os.path.join(raw_folder, f"{id}/")
         os.makedirs(query_folder, exist_ok=True)
-
-        today = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
-
+        raw_output_file = f'{query_folder}/{today}-{days}_raw.json'
+        
+        if not os.path.exists(raw_output_file):
+            try:
+                papers = scrape_arxiv_papers_pipeline(
+                    query=query,
+                    category=category,
+                    sort_by_choice=sort_by_choice,
+                    max_results=max_results,
+                    days=days
+                )
+                with open(raw_output_file, 'w') as f:
+                    json.dump(papers, f, indent=4, default=str)
+                print(f"Scraped {len(papers)} papers for {id}")
+            except Exception as e:
+                print(f"Error scraping papers for {id}: {e}")
+                continue
+    
+    # Phase 2: Analysis
+    for scrap in queries:
+        id = scrap['id']
+        filter_query = scrap['filter_query']
+        negative_query = scrap['negative_query']
+        score_th = scrap['score_th']
+        
+        raw_folder_path = os.path.join(raw_folder, f"{id}/")
+        query_folder = os.path.join(json_folder, f"{id}/")
+        os.makedirs(query_folder, exist_ok=True)
+        
+        raw_input_file = f'{raw_folder_path}/{today}-{days}_raw.json'
         output_file = f'{query_folder}/{today}-{days}.json'
-        print(os.path.exists(output_file))
         cfg_file = f'{query_folder}/{today}-{days}_config.json'
-
-        if os.path.exists(cfg_file):
-            with open(cfg_file, 'r') as f:
-                cfg = json.load(f)
-                print("cfg : ",cfg)
-            if 'max_results' not in cfg:
-                cfg['max_results'] = max_results
-            if 'sortBy' not in cfg:
-                cfg['sortBy'] = sort_by_choice
-
-            if (cfg['query'] == query and cfg['category'] == category 
-                and cfg['filter_query'] == filter_query 
-                and cfg['score_th'] == score_th 
-                and os.path.exists(output_file)
-                and cfg['max_results'] == max_results
-                and cfg['sortBy'] == sort_by_choice
-                ):
-                print(f"Skipping {id} as it has already been scraped today.")
-            else: # create a new instance
-                with open(cfg_file.replace(".json","_new.json"), 'w') as f:
-                    json.dump(scrap, f, indent=4)
-                out_dict = process_arxiv_papers(query, category, filter_query,sort_by_choice=sort_by_choice,negative_query=negative_query,score_threshold=score_th,max_results = max_results,days=days)
-                with open(output_file.replace("_config.json","_new_config.json"), 'w') as f:
-                    json.dump(out_dict, f, indent=4, default=str)
-        else:
-            out_dict = process_arxiv_papers(query, category, filter_query,sort_by_choice=sort_by_choice,negative_query=negative_query,score_threshold=score_th,max_results = max_results,days=days)
-            with open(output_file, 'w') as f:
-                json.dump(out_dict, f, indent=4, default=str)
-            with  open(cfg_file, 'w') as f:
-                json.dump(scrap, f, indent=4,  default=str)
         
-        # Format in Markdown
-        import scripts.utils.md_format as mdf
-        md_file_path = f'{md_folder}/{id}/{today}-{days}.md'
-        with open(output_file, 'r') as f:
-            out_dict = json.load(f)
-        if os.path.exists(md_file_path):
-            print(f"Skipping {id} as it has already been formatted today.")
-        else:
-            mdf.list_to_markdown(out_dict, md_file_path, ai_summary=ai_summary)
-        
-
-        
-
-
-        
-
-       
-
-    # query = "human pose estimation"
-    # category = "cs.CV"
-    # filter_query = "human pose estimation keypoints body wholebody skeleton heatmap regression"
-    # score_th= 0.6
-    # out_dict = process_arxiv_papers(query, category, filter_query,score_th=score_th)
-    # output_folder = "automation/weekly_arxiv_json"
-    # if not os.path.exists(output_folder):
-    #     os.makedirs(output_folde
-
-
-       
-
-    # query = "human pose estimation"
-    # category = "cs.CV"
-    # filter_query = "human pose estimation keypoints body wholebody skeleton heatmap regression"
-    # score_th= 0.6
-    # out_dict = process_arxiv_papers(query, category, filter_query,score_th=score_th)
-    # output_folder = "automation/weekly_arxiv_json"
-    # if not os.path.exists(output_folder):
-    #     os.makedirs(output_folder)
-    # today = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
-    # with open(f'{output_folder}/{today}.json', 'w') as f:
-    #     json.dump(out_dict, f, indent=4, default=str)
+        if os.path.exists(raw_input_file) and not os.path.exists(output_file):
+            try:
+                with open(raw_input_file, 'r') as f:
+                    papers = json.load(f)
+                
+                analyzed_papers = analyze_papers_pipeline(
+                    papers=papers,
+                    filter_query=filter_query,
+                    negative_query=negative_query,
+                    score_threshold=score_th
+                )
+                
+                with open(output_file, 'w') as f:
+                    json.dump(analyzed_papers, f, indent=4, default=str)
+                with open(cfg_file, 'w') as f:
+                    json.dump(scrap, f, indent=4, default=str)
+                print(f"Analyzed {len(analyzed_papers)} papers for {id}")
+                
+                # Generate markdown
+                md_file_path = f'{md_folder}/{id}/{today}-{days}.md'
+                if not os.path.exists(md_file_path):
+                    os.makedirs(os.path.dirname(md_file_path), exist_ok=True)
+                    mdf.list_to_markdown(analyzed_papers, md_file_path, ai_summary=ai_summary)
+                
+            except Exception as e:
+                print(f"Error analyzing papers for {id}: {e}")
+                continue
 
