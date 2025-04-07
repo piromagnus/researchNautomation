@@ -2,3 +2,5 @@
 .ai.env
 Knowledge
 __pycache__
+.venv
+.vscode

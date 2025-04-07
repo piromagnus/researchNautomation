@@ -203,8 +203,6 @@ if __name__ == "__main__":
     if file_name:
         
         filepath = os.path.join(folder_extracted,no_suff_filename+".md")
-        os.makedirs(figures_path, exist_ok=True)
-
         process_single_md(filepath,vault_path,figures_path,output,template_model,client,tags,model_name=model_name,prompt=prompt,rules=rules)
 
     else:

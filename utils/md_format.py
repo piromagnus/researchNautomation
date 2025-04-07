@@ -1,11 +1,13 @@
 import json
+import logging
+import traceback
 from typing import List, Dict
 from datetime import datetime
 import os
 import matplotlib.pyplot as plt
 import numpy as np
-from io import BytesIO
-import aisuite as ai
+
+import litellm
 from dotenv import load_dotenv, find_dotenv
 
 
@@ -13,31 +15,68 @@ from dotenv import load_dotenv, find_dotenv
 
 # model = "ollama:qwq:latest"
 load_dotenv(find_dotenv())
-model = os.getenv("SMALL_SUMMARY_MODEL",'ollama:phi4:latest')
+# Adjust model variable loading
+# model = os.getenv("SMALL_SUMMARY_MODEL",'ollama:phi4:latest')
+# Determine model based on env vars. litellm handles various providers.
+# We'll get the specific model string from the .env or .ai.env later.
+llm_model = os.getenv("LITELLM_MODEL", 'ollama/phi4') # Default to ollama/phi4 if not set
+
+# add a logger
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def get_llm_response(content, system_prompt, temperature=0.7):
-    """Generic LLM response function"""
-    client = ai.Client()
+    """Generic LLM response function using litellm"""
+
     messages = [
-        {"role": "system", "content": system_prompt +" You always reason before anwering. You reason step by step with a maximum of 6 words per thought and you give your answer after this indicator ####---####"},
+        {"role": "system", "content": system_prompt + 
+         """ You always reason before outputting the answer whatever the user asks. 
+         You reason step by step with a maximum of 6 words per thought and you give your answer after this delimiter ####---####. 
+         You must use the delimiter before writing any answer. 
+         All outputs must follow the format [reasoning]####---####[answer]"""},
         {"role": "user", "content": content}
     ]
     try:
-        response = client.chat.completions.create(
-            model=model,
+        # Use litellm.completion instead of client.chat.completions.create
+        response = litellm.completion(
+            model=llm_model, # Use the model defined above
             messages=messages,
-            temperature=temperature
+            temperature=temperature,
+            # Add api_base if needed for local models like Ollama
+            api_base=os.getenv("OLLAMA_BASE_URL") if llm_model.startswith("ollama/") else None 
         )
-        res = response.choices[0].message.content.strip().split("####---####")
-        if len(res) > 1:
-            return res[1].strip()
+        # Access response content correctly for litellm
+        res = response.choices[0].message.content.strip() 
+        logger.info(f"LLM response: {res}")
+        res_parts = res.split("####---####") # Renamed variable to avoid conflict
+        if len(res_parts) > 1 and res_parts[1].strip() != "":
+            return res_parts[1].strip()
         else:
-            get_llm_response(content, system_prompt, temperature)
-        return res
+            # Retry logic might need adjustment depending on litellm's error handling
+            # For simplicity, let's just return the raw response if splitting fails
+            logger.warning("LLM response did not contain the expected delimiter. Returning raw response.")
+            return get_llm_response(content, system_prompt, temperature)
+
+            # return res # Return the full response if delimiter not found after reasoning.
+            # Original retry logic: get_llm_response(content, system_prompt, temperature) 
+        # Return the part after the delimiter
+        # return res # This line seems incorrect, should return res_parts[1]
     
     except Exception as e:
-        print(f"Error in LLM call: {e}")
-        return None
+        #print the traceback
+        print(f"Error in LLM call with litellm: {e}")
+        print(traceback.format_exc())
+        # Consider more robust error handling if needed
+        # Check if it's an API key error specifically
+        if "API key" in str(e):
+             logger.error("API key error. Please check your environment variables (e.g., OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)")
+        elif "Connection refused" in str(e) and llm_model.startswith("ollama/"):
+             logger.error(f"Connection error. Is Ollama running and accessible at {os.getenv('OLLAMA_BASE_URL')}?")
+        #add the api error like rate limit error
+        elif "Rate limit" in str(e):
+             logger.error("Rate limit error. Please wait a few seconds and try again.")
+        # Reraise or return None based on desired behavior
+        return None 
 
 def get_tasks_tags(paper):
     """Extract the main task from the paper"""
@@ -46,7 +85,7 @@ def get_tasks_tags(paper):
         Analyze the research paper and identify the primary task type or research category.
         Examples include: "Image Classification", "3D Monocular Human pose estimation"," "3D Multiview Human pose estimation", "Reinforcement Learning", etc.
         Provide only the task type without any additional explanation or surrounding text.
-        Format your response as a single sentence.
+        Format your answer as a single sentence.
         \n\n{paper}
     """
     return get_llm_response(content, system_prompt)
@@ -57,7 +96,8 @@ def get_contributions(paper):
     content = f"""
         Analyze this research paper and identify the 3 most important technical contributions.
         Be specific, concise and technical.
-        Format as bullet points.
+        Format your answer as bullet points.
+        Your answer will contains only the bullet points.
         \n\n{paper}
     """
     return get_llm_response(content, system_prompt)
@@ -134,68 +174,117 @@ def list_to_markdown(papers: List[Dict], output_file: str, ai_summary=True):
         papers (List[Dict]): List of papers with keys like 'title', 'abstract', 'link', 
                              'repo', 'score', 'stars', and 'date'.
         output_file (str): Path to the output Markdown file.
+        ai_summary (bool): Whether to generate AI summaries for papers. Defaults to True.
     """
     with open(output_file, 'w', encoding='utf-8') as md:
         n_papers = len(papers)
-        dates = [paper.get('date', '').split(" ")[0] for paper in papers]
-        unique_dates = list(set(dates))
+        if n_papers == 0:
+             md.write("# No papers found for this query.\n")
+             return
+
+        dates = [paper.get('date', '').split("T")[0] for paper in papers if paper.get('date')] # Use ISO format date part
+        unique_dates = sorted(list(set(dates)), reverse=True) # Sort dates reverse chronologically
         subset_dates = unique_dates[:min(5,len(unique_dates))]  # Example: limit to the first 5 unique dates
-        avg_score = sum(float(paper.get('general_score', 0)) for paper in papers) / n_papers
-        avg_negative = sum(float(paper.get('negative_score', 0)) for paper in papers) / n_papers
-        avg_positive = sum(float(paper.get('positive_score', 0)) for paper in papers) / n_papers
+        
+        # Ensure scores are floats before calculation
+        general_scores = [float(p.get('general_score', 0)) for p in papers]
+        negative_scores = [float(p.get('negative_score', 0)) for p in papers]
+        positive_scores = [float(p.get('positive_score', 0)) for p in papers]
+        
+        avg_score = sum(general_scores) / n_papers
+        avg_negative = sum(negative_scores) / n_papers
+        avg_positive = sum(positive_scores) / n_papers
+        
         total_stars = sum(int(paper.get('stars', 0)) for paper in papers)
-        avg_stars = total_stars / n_papers
+        # Avoid division by zero if no papers have stars info
+        papers_with_stars = [p for p in papers if 'stars' in p] 
+        
         md.write(f"# Stats\n")
         md.write(f"Number of papers: {n_papers}\n")
         str_dates='\n - '.join(subset_dates)
-        md.write(f"Number of unique dates:\n - {str_dates}\n")
+        md.write(f"Recent Dates:\n - {str_dates}\n") # Clarified heading
 
         md.write(f"Average score: {avg_score:.2f}\n")
 
         md.write(f"Average negative score: {avg_negative:.2f}\n")
         md.write(f"Average positive score: {avg_positive:.2f}\n")
 
-        scores = [float(paper.get('general_score', 0)) for paper in papers]
-        add_ascii_histogram(scores, md)
+        # Use general_scores directly
+        add_ascii_histogram(general_scores, md) 
         add_scatter_plot(papers, md,output_file)
-        client_llm = ai.Client()
+        # Removed redundant client instantiation
+        # client_llm = ai.Client()
 
         md.write(f"Total stars: {total_stars}\n\n")
+
         for paper in papers:
             title = paper.get('title', 'No Title')
-            authors = paper.get('authors', ['No Authors'])
+            # Handle potential list of authors objects or strings
+            authors_data = paper.get('authors', ['No Authors']) 
+            if authors_data and isinstance(authors_data[0], str):
+                 authors = authors_data # Assume list of strings
+            elif authors_data and hasattr(authors_data[0], 'name'): # Check for arxiv.Result.Author objects
+                 authors = [str(a) for a in authors_data]
+            else:
+                 authors = ['No Authors'] # Default case
+
             abstract = paper.get('abstract', 'No Abstract')
             arxiv_link = paper.get('link', '#')
             repo_link = paper.get('repo', None)
             # print(abstract)
-            negative_score = paper.get('negative_score', 'N/A')
-            positive_score = paper.get('positive_score', 'N/A')
-            general_score = paper.get('general_score', 'N/A')
+            # Format scores consistently
+            negative_score = paper.get('negative_score') 
+            positive_score = paper.get('positive_score')
+            general_score = paper.get('general_score')
             stars = paper.get('stars', 0)
             date_str = paper.get('date', '')
 
-            if ai_summary and abstract != "No Abstract" and abstract != "":
-                task = get_tasks_tags(abstract)
-                summary = get_paper_summary(abstract)
-                contributions = get_contributions(abstract)
+            if ai_summary and abstract and abstract != "No Abstract" and abstract.strip() != "": # Check if abstract is not empty
+                try: # Add error handling for LLM calls
+                    task = get_tasks_tags(abstract)
+                    summary = get_paper_summary(abstract)
+                    contributions = get_contributions(abstract)
+                except Exception as e:
+                     logger.error(f"Failed to generate AI summary for '{title}': {e}")
+                     task = "Error generating task"
+                     summary = "Error generating summary"
+                     contributions = "Error generating contributions"
             else:
                 task = None
                 summary = None
                 contributions = None
 
-            # Extract only the date part
+            # Extract only the date part robustly
             try:
-                date = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S%z").strftime("%Y-%m-%d")
-            except ValueError:
+                 # Handle both datetime objects and string formats
+                 if isinstance(date_str, datetime):
+                      date = date_str.strftime("%Y-%m-%d")
+                 elif isinstance(date_str, str):
+                      # Attempt parsing common formats
+                      parsed_date = None
+                      for fmt in ("%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%d %H:%M:%S%z", "%Y-%m-%d"):
+                           try:
+                                parsed_date = datetime.strptime(date_str.split('T')[0], fmt.split('T')[0]) # Try parsing only date part
+                                break
+                           except ValueError:
+                                continue
+                      date = parsed_date.strftime("%Y-%m-%d") if parsed_date else "Invalid Date Format"
+                 else:
+                      date = "Invalid Date Type"
+            except Exception: # Catch broader errors during date processing
                 date = "Invalid Date"
             
 
             
             #md.write(f"Average stars: {avg_stars:.2f}")
 
-            repo_str=  f"[Repo]({repo_link})\n" if (repo_link!="N/A" and repo_link is not None) else "No Repo\n"
-            authors_abv = [ author.split(" ")[-1] + ", " +        author.split(" ")[0][0]+"." for author in authors]
-            authors_str = ", ".join(authors_abv)
+            repo_str=  f"[Repo]({repo_link})\n" if (repo_link and repo_link != "N/A") else "No Repo\n" # Simplified check
+            # Format authors correctly
+            try:
+                authors_abv = [author.split(" ")[-1] + ", " + author.split(" ")[0][0] + "." for author in authors if " " in author]
+                authors_str = ", ".join(authors_abv) if authors_abv else ", ".join(authors) # Fallback if no space
+            except:
+                authors_str = ", ".join(map(str, authors)) # Handle unexpected author format
 
             md.write(f"# {title}\n")
             if task is not None:
@@ -204,14 +293,25 @@ def list_to_markdown(papers: List[Dict], output_file: str, ai_summary=True):
                 md.write(f"**Key Contributions:**\n{contributions}\n")
             md.write(f"**Authors:** {authors_str}\n")
             md.write(f"**Links:** [arXiv]({arxiv_link}) | " + repo_str)
-            if general_score != 'N/A':
-                md.write(f"**Score:** {general_score} | ⭐ : {stars}\n")
-                md.write(f"**Score positive:** {positive_score} | **Score negative:** {negative_score}\n")
+            # Format scores or show N/A
+            score_line = "**Score:** N/A"
+            if general_score is not None:
+                 score_line = f"**Score:** {float(general_score):.3f} | ⭐ : {stars}" # Using 3 decimal places
+            md.write(f"{score_line}\n")
+            
+            score_details = []
+            if positive_score is not None:
+                 score_details.append(f"**Score positive:** {float(positive_score):.3f}")
+            if negative_score is not None:
+                 score_details.append(f"**Score negative:** {float(negative_score):.3f}")
+            if score_details:
+                 md.write(" | ".join(score_details) + "\n")
+
             md.write(f"**Date:** {date}\n")
             if summary:
                 md.write(f"**Summary:** {summary}\n")
-            md.write(f"**Abstract:** {abstract}\n\n")
-    
+            # Use markdown blockquote for abstract
+            md.write(f"**Abstract:** \n> {abstract}\n\n") 
 
 if __name__ == "__main__":
     load_dotenv(find_dotenv())

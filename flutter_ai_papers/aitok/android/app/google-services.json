@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "715049763436",
+    "project_id": "taiktok",
+    "storage_bucket": "taiktok.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:715049763436:android:e1c1d7aa866dc834488e49",
+        "android_client_info": {
+          "package_name": "com.piromagnus.Taiktok"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB-HaHvamc6bSbcBtH9lj2B5s6JWhf0p1I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+    
+  ],
+  "configuration_version": "1"
+}

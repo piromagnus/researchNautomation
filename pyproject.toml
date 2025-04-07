@@ -1,0 +1,11 @@
+[project]
+name = "scripts"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "setuptools>=78.1.0",
+    "triton>=3.2.0",
+    "xformers>=0.0.29.post3",
+]
