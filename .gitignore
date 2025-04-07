@@ -4,3 +4,6 @@ Knowledge
 __pycache__
 .venv
 .vscode
+__pycache__
+.cursor
+flutter_ai_papers
