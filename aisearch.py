@@ -1,11 +1,11 @@
 from gpt_researcher import GPTResearcher
-import aisuite as ai
 import asyncio
 from dotenv import load_dotenv, find_dotenv
 import requests
 import bs4
 from utils.io import open_obsi_file
 from utils.create_mermaid import validate_diagram
+import litellm
 
 
 
@@ -30,14 +30,20 @@ def get_md_query(prompt:str,file_path: str) -> str:
     query = open_obsi_file(file_path)
 
     filename = os.path.basename(file_path).replace(".md","")
-    client = ai.Client()
     messages = [
             {"role": "system", "content": "You are a helpful assistant that creates concises query for agentic search. Your objectives it to create a reasearch query based on the informations provided. You will only give the query and nothing before nor any explaination of what it is. You will be concise without long sentences. You will use short group of words"},
             {"role": "user", "content": f"Please write a query for this concept {filename} using this context:\n\n{query}"}
             ]
             
-    response = client.chat.completions.create(
-        model=os.getenv("QUERY_LLM"),
+    # Replaced aisuite call with litellm
+    # Transform model name for litellm
+    query_llm_env = os.getenv("QUERY_LLM")
+    model_name = query_llm_env # Keep ollama format as is, or adapt if needed
+    if query_llm_env and query_llm_env.startswith("google_genai:"):
+        model_name = "gemini/" + query_llm_env.split(":", 1)[1]
+        
+    response = litellm.completion(
+        model=model_name, # Use transformed name
         messages=messages,
         temperature=0.7
     )
@@ -99,7 +105,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Conduct AI research")
     parser.add_argument("vault", type=str, help="the folder where the research data is stored", default="/home/pmarrec/vault")
     parser.add_argument("file_name", type=str, help="the file path to the research data")
-    parser.add_argument("report_type", type=str, help="the type of report to generate", default="research_report")
+    parser.add_argument("--report_type", type=str, help="the type of report to generate", default="research_report")
     args = parser.parse_args()
     
 
@@ -129,14 +135,20 @@ if __name__ == "__main__":
     report = report.replace(r"\[ ", "$$").replace(r" \]", "$$")
     report = report.replace(r"\[", "$$").replace(r"\]", "$$")
 
-    client = ai.Client()
     messages = [
             {"role": "system", "content": "You are a helpful assistant that creates concises summary of large text to be read fast. You are an expert in machine learning, computer science and Computer vision."},
             {"role": "user", "content": f"Please summarize the following in a PhD level manner grasping the most important part in less than 200 words:\n\n{report}"}
             ]
             
-    response = client.chat.completions.create(
-        model="genai:gemini-2.0-flash-thinking-exp-01-21",
+    # Replaced aisuite call with litellm, using SMART_LLM from env
+    # Transform model name for litellm
+    smart_llm_env = os.getenv("SMART_LLM")
+    model_name = smart_llm_env # Default
+    if smart_llm_env and smart_llm_env.startswith("google_genai:"):
+        model_name = "gemini/" + smart_llm_env.split(":", 1)[1]
+        
+    response = litellm.completion(
+        model=model_name, # Use transformed name
         messages=messages,
         temperature=0.7
     )
@@ -160,11 +172,4 @@ if __name__ == "__main__":
     with open(file_path, "a") as file:
         file.write(f"\n\n---\n\n{report} \n time taken: {time.time()-start} seconds\n\n")
 
-## .env for Ollama environment
-# OPENAI_API_KEY="123"
-# OPENAI_API_BASE="http://127.0.0.1:11434/v1"
-# OLLAMA_BASE_URL="http://127.0.0.1:11434/"
-# FAST_LLM="ollama:qwen2:1.5b"
-# SMART_LLM="ollama:qwen2:1.5b"
-# EMBEDDING="ollama:all-minilm:22m"
 

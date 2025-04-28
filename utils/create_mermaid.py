@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 from utils.io import open_obsi_file
-import aisuite as ai
+import litellm
 from pathlib import Path
 import os
 import time
@@ -75,7 +75,6 @@ def request_correction(error: str, diagram: str, content: str) -> str:
     """
     Requests a correction from the LLM based on the error message.
     """
-    client = ai.Client()
     messages = [
         {"role": "system", "content": "You are a helpful assistant that fixes mermaid diagrams. You only respond with the corrected diagram within the ```mermaid``` tags."},
         {"role": "user", "content": f"""
@@ -90,22 +89,35 @@ Context content:
 Please provide a corrected version of the mermaid diagram that fixes this error. Only respond with the corrected diagram in markdown code fences."""}
     ]
     
-    response = client.chat.completions.create(
-        model="genai:gemini-2.0-flash-thinking-exp-01-21",
+    # Replaced aisuite with litellm, using FAST_LLM from env
+    # Transform model name for litellm
+    fast_llm_env = os.getenv("FAST_LLM")
+    model_name = fast_llm_env # Default
+    if fast_llm_env and fast_llm_env.startswith("google_genai:"):
+        model_name = "gemini/" + fast_llm_env.split(":", 1)[1]
+        
+    response = litellm.completion(
+        model=model_name, # Use transformed name
         messages=messages,
         temperature=0.7
     )
     return response.choices[0].message.content
 
 def generate_diagram(content: str) -> str:
-    client = ai.Client()
     messages = [
             {"role": "system", "content": "You are a helpful assistant that creates mermaid diagram of concepts. You will focus on the main topic and use sub concept of the main topic explain it visually. You are an expert in machine learning, computer science and Computer vision. You will use the format ```mermaid``` tag. for diagram"},
             {"role": "user", "content": request_prompt.format(content)}
             ]
     
-    response = client.chat.completions.create(
-        model="genai:gemini-2.0-flash-thinking-exp-01-21",
+    # Replaced aisuite with litellm, using FAST_LLM from env
+    # Transform model name for litellm
+    fast_llm_env = os.getenv("FAST_LLM")
+    model_name = fast_llm_env # Default
+    if fast_llm_env and fast_llm_env.startswith("google_genai:"):
+        model_name = "gemini/" + fast_llm_env.split(":", 1)[1]
+        
+    response = litellm.completion(
+        model=model_name, # Use transformed name
         messages=messages,
         temperature=0.7
     )

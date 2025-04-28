@@ -1,7 +1,8 @@
 import os
 from pathlib import Path
 import time
-import aisuite as ai
+# import aisuite as ai
+import litellm
 from dotenv import load_dotenv, find_dotenv
 import base64
 import subprocess  # added import for subprocess
@@ -14,9 +15,9 @@ def process_single_md(
     loc_figures_path: str,
     output_folder: str,
     template_folder : str,
-    client: ai.Client,
+    # client: ai.Client, # Removed aisuite client
     tags: list = None,
-    model_name: str = "openai:gpt-4o-2024-11-20",
+    model_name: str = "openai/gpt-4o-2024-11-20", # Use litellm model format
     prompt: str = "",
     rules: list = None,
     ) -> None:
@@ -24,7 +25,7 @@ def process_single_md(
 
         input_folder = os.path.dirname(file_path)
         filename = os.path.basename(file_path)
-        provider = model_name.split(":")[0]
+        # provider = model_name.split(":")[0] # No longer needed with litellm standard format
         output_filename = "Paper - " + Path(filename).stem + '.md'
         output_path = os.path.join(output_folder, output_filename)
 
@@ -33,11 +34,11 @@ def process_single_md(
         img_listdir = os.listdir(full_figures_path)
         img_listdir.sort()
         #sort
-        if provider == "genai":
+        # if provider == "genai": # Provider-specific logic might need adjustment based on litellm setup or removed if not needed
 
-            for img in img_listdir:
-                full_img_path = os.path.join(full_figures_path,img)
-                client.upload.upload_file(full_img_path, provider_key=provider)
+        #     for img in img_listdir:
+        #         full_img_path = os.path.join(full_figures_path,img)
+        #         client.upload.upload_file(full_img_path, provider_key=provider) # Removed aisuite specific upload
 
         if os.path.exists(output_path):
             # If the output file already exists, skip processing this Markdown file
@@ -67,20 +68,33 @@ def process_single_md(
         # Define the chat messages with system and user roles
         messages = [
             {"role": "system", "content": "You are an assistant that analyzes academic papers. You are a specialist of computer vision."},
-            {"role": "user", "content":   prompt} if provider != "genai" else {"role": "user", "content":   prompt},
+            {"role": "user", "content":   prompt} # Removed provider check, as format is standard
         ]
         
         # print(prompt)
+        api_base = None
+        if model_name.startswith("ollama/"):
+            api_base = os.getenv("OLLAMA_BASE_URL") # Get Ollama base URL if using Ollama
 
         # try:
         start_time = time.time()
+        
+        # Set timeout and custom headers if needed, passed directly to completion
+        timeout = 180 # Example timeout
+        custom_headers = None
+        if model_name.startswith("anthropic/"): # Example for Anthropic headers
+             custom_headers = {"anthropic-beta": "pdfs-2024-09-25"}
 
-        response = client.chat.completions.create(
+        response = litellm.completion(
             model=model_name,
             messages=messages,
-            # max_tokens=40000,
-            temperature=0.5)
-        analysis = response.choices[0].message.content.replace("```markdown\n","").replace("```","")
+            # max_tokens=40000, # litellm might use different parameter names or defaults
+            temperature=0.5,
+            api_base=api_base, # Pass API base if needed (e.g., for Ollama)
+            timeout=timeout, # Pass timeout
+            headers=custom_headers # Pass custom headers if needed
+            )
+        analysis = response.choices[0].message.content.replace("```markdown\\n","").replace("```","")
         
         # remove the ####---#### at the end
         try:
@@ -105,8 +119,9 @@ def process_single_md(
             completion_tokens = response.usage.completion_tokens
             print(f"Time taken: {time_taken:.2f} seconds")
             print(f"Prompt tokens: {prompt_tokens}, Completion tokens: {completion_tokens}")
-        except:
+        except AttributeError: # Handle cases where usage info might not be present
             print(f"Time taken: {time_taken:.2f} seconds")
+            print("Token usage information not available in response.")
 
         analysis = analysis + "\n# Figures\n"
         for figure in img_listdir:
@@ -168,7 +183,7 @@ if __name__ == "__main__":
     # model_name = "deepseek:deepseek-reasoner"
     # model_name = "deepseek:deepseek-chat"
     # model_name = "genai:gemini-2.0-pro-exp-02-05"
-    model_name = os.getenv("SUMMARY_MODEL",'genai:gemini-2.0-flash-exp')
+    model_name = os.getenv("SUMMARY_MODEL",'gemini/gemini-2.0-flash') # Use litellm format
     print("Model name:",model_name)
 
 
@@ -177,12 +192,13 @@ if __name__ == "__main__":
 
 
 
-    client = ai.Client(
-        provider_configs={
-        "ollama": {"timeout": 180},
-        "anthropic" : {"default_headers" : {
-                            "anthropic-beta": "pdfs-2024-09-25"}
-                            }})
+    # Removed aisuite client initialization
+    # client = ai.Client(
+    #     provider_configs={
+    #     "ollama": {"timeout": 180},
+    #     "anthropic" : {"default_headers" : {
+    #                         "anthropic-beta": "pdfs-2024-09-25"}
+    #                         }})
 
    
     
@@ -203,7 +219,8 @@ if __name__ == "__main__":
     if file_name:
         
         filepath = os.path.join(folder_extracted,no_suff_filename+".md")
-        process_single_md(filepath,vault_path,figures_path,output,template_model,client,tags,model_name=model_name,prompt=prompt,rules=rules)
+        # process_single_md(filepath,vault_path,figures_path,output,template_model,client,tags,model_name=model_name,prompt=prompt,rules=rules) # Removed client argument
+        process_single_md(filepath,vault_path,figures_path,output,template_model,tags=tags,model_name=model_name,prompt=prompt,rules=rules)
 
     else:
         print("Error: No file provided")

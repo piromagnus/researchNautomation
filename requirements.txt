@@ -1,6 +1,5 @@
 pdfminer.six
 gpt_researcher
-# aisuite[all]python-dotenv>=1.0.0
 matplotlib
 numpy
 requests>=2.31.0
@@ -22,4 +21,6 @@ scour
 beautifulsoup4>=4.12.0
 litellm
 xformers
+langchain-google-genai
+langchain_ollama
 

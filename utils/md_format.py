@@ -9,6 +9,7 @@ import numpy as np
 
 import litellm
 from dotenv import load_dotenv, find_dotenv
+from tqdm import tqdm
 
 
 
@@ -22,7 +23,7 @@ load_dotenv(find_dotenv())
 llm_model = os.getenv("LITELLM_MODEL", 'ollama/phi4') # Default to ollama/phi4 if not set
 
 # add a logger
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
 def get_llm_response(content, system_prompt, temperature=0.7):
@@ -42,6 +43,7 @@ def get_llm_response(content, system_prompt, temperature=0.7):
             model=llm_model, # Use the model defined above
             messages=messages,
             temperature=temperature,
+            timeout=120,
             # Add api_base if needed for local models like Ollama
             api_base=os.getenv("OLLAMA_BASE_URL") if llm_model.startswith("ollama/") else None 
         )
@@ -54,7 +56,7 @@ def get_llm_response(content, system_prompt, temperature=0.7):
         else:
             # Retry logic might need adjustment depending on litellm's error handling
             # For simplicity, let's just return the raw response if splitting fails
-            logger.warning("LLM response did not contain the expected delimiter. Returning raw response.")
+            logger.warning("LLM response did not contain the expected delimiter. Retrying...")
             return get_llm_response(content, system_prompt, temperature)
 
             # return res # Return the full response if delimiter not found after reasoning.
@@ -182,7 +184,7 @@ def list_to_markdown(papers: List[Dict], output_file: str, ai_summary=True):
              md.write("# No papers found for this query.\n")
              return
 
-        dates = [paper.get('date', '').split("T")[0] for paper in papers if paper.get('date')] # Use ISO format date part
+        dates = [paper.get('date', '').split()[0] for paper in papers if paper.get('date')] # Extract only the day part
         unique_dates = sorted(list(set(dates)), reverse=True) # Sort dates reverse chronologically
         subset_dates = unique_dates[:min(5,len(unique_dates))]  # Example: limit to the first 5 unique dates
         
@@ -217,7 +219,7 @@ def list_to_markdown(papers: List[Dict], output_file: str, ai_summary=True):
 
         md.write(f"Total stars: {total_stars}\n\n")
 
-        for paper in papers:
+        for paper in tqdm(papers, desc="Processing papers"):
             title = paper.get('title', 'No Title')
             # Handle potential list of authors objects or strings
             authors_data = paper.get('authors', ['No Authors']) 

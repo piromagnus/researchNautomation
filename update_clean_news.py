@@ -66,8 +66,8 @@ def sync_markdown_json(root_folder: str):
         for file in files:
             json_path = os.path.join(input_folder, folder, file)
             json_archive = os.path.join(input_folder,"archive", file)
-            markdown_path = os.path.join(markdown_folder, folder, file.replace('.json', ' clean.md'))
-            output_json_path = os.path.join(input_folder, folder, file.replace('.json', '_clean.json'))
+            markdown_path = os.path.join(markdown_folder, folder, file.replace('_analyzed.json', ' clean.md'))
+            output_json_path = os.path.join(input_folder, folder, file.replace('_analyzed.json', '_clean.json'))
         
             if os.path.exists(json_path) and os.path.exists(markdown_path):
                 metrics = update_json_from_markdown(json_path, markdown_path, output_json_path)

@@ -118,7 +118,7 @@ def detect_github_repos(text): # Renamed parameter for clarity
     cleaned_urls = [url.rstrip('./') for url in github_urls]
     return list(set(cleaned_urls)) # Return unique URLs
 
-def get_relevant_papers(query, papers, embedding_model_name="dunzhang/stella_en_400M_v5"):
+def get_relevant_papers(query, papers, embedding_model_name="mixedbread-ai/mxbai-embed-large-v1"):
     """Calculates relevance scores for papers based on a query using sentence transformers."""
     try:
         # Load the model dynamically
@@ -233,7 +233,7 @@ def scrape_arxiv_papers_pipeline(query, category, sort_by_choice="lastUpdatedDat
     logger.info(f"--- Scrape Pipeline finished in {end_time - start_time:.2f} seconds ---")
     return filtered_papers
 
-def analyze_papers_pipeline(papers, filter_query, negative_query, score_threshold=0.6, embedding_model_name="dunzhang/stella_en_400M_v5", github_token=None):
+def analyze_papers_pipeline(papers, filter_query, negative_query, score_threshold=0.6, embedding_model_name="mixedbread-ai/mxbai-embed-large-v1", github_token=None):
     """Pipeline for analyzing, scoring, and enriching papers."""
     logger.info(f"\n--- Starting Analysis Pipeline ---")
     logger.info(f"Positive Query: '{filter_query}', Negative Query: '{negative_query}', Threshold: {score_threshold}")
@@ -406,7 +406,7 @@ if __name__ == "__main__":
     json_folder_path = os.path.join(root_folder, args.json_folder or os.getenv("JSON_FOLDER", "automation/weekly_arxiv_json"))
     md_folder_path = os.path.join(root_folder, args.md_folder or os.getenv("MD_FOLDER", "Weekly Letter"))
     raw_folder_path = os.path.join(json_folder_path, args.raw_subfolder or "raw")
-    embedding_model = args.embedding_model or os.getenv("EMBEDDING_MODEL", "dunzhang/stella_en_400M_v5") # Get model from env or default
+    embedding_model = args.embedding_model or os.getenv("EMBEDDING_MODEL", "mixedbread-ai/mxbai-embed-large-v1") # Get model from env or default
     github_token = os.getenv("GITHUB_TOKEN") # Needed for star fetching
 
     logger.info("--- Configuration ---")
