@@ -89,20 +89,25 @@ def process_single_md(
             model=model_name,
             messages=messages,
             # max_tokens=40000, # litellm might use different parameter names or defaults
+            reasoning_effort="medium",
             temperature=0.5,
             api_base=api_base, # Pass API base if needed (e.g., for Ollama)
             timeout=timeout, # Pass timeout
             headers=custom_headers # Pass custom headers if needed
             )
+        if response.choices[0].message.content is None:
+            print("No response from model")
+            print(response.choices[0].message)
+            exit(0)
         analysis = response.choices[0].message.content.replace("```markdown\\n","").replace("```","")
         
         # remove the ####---#### at the end
         try:
-            print(analysis.split("####---####")[0])
+            # print(analysis.split("####---####")[0])
             analysis = analysis.split("####---####")[1]
             
         except:
-            print("No separator found in {}".format(analysis))
+            print("No separator found ")
         ## remove the first lines if they are empty but not after
         
         analysis = analysis.split("\n")
@@ -167,10 +172,13 @@ if __name__ == "__main__":
     folder_extracted=os.path.join(vault_path,current_local_extract_folder)
     figures_path = os.path.join(current_local_extract_folder,"images")
     template_model = os.path.join(vault_path,template_path)
-    os.makedirs(output, exist_ok=True)
-    os.makedirs(extract_folder, exist_ok=True)
-    os.makedirs(os.path.join(extract_folder,"images"), exist_ok=True)
-    os.makedirs(folder_extracted, exist_ok=True)
+    try:
+        os.makedirs(output, exist_ok=True)
+        os.makedirs(extract_folder, exist_ok=True)
+        os.makedirs(os.path.join(extract_folder,"images"), exist_ok=True)
+        os.makedirs(folder_extracted, exist_ok=True)
+    except Exception as e:
+        print(f"Error creating directories: {e}")
 
 
 
@@ -187,20 +195,6 @@ if __name__ == "__main__":
     print("Model name:",model_name)
 
 
-    
-
-
-
-
-    # Removed aisuite client initialization
-    # client = ai.Client(
-    #     provider_configs={
-    #     "ollama": {"timeout": 180},
-    #     "anthropic" : {"default_headers" : {
-    #                         "anthropic-beta": "pdfs-2024-09-25"}
-    #                         }})
-
-   
     
 
     
