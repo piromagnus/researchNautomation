@@ -31,7 +31,7 @@ rules = [
         "Use either foundation if it a paper on a backbone or fine-tuning if it is a paper that only use pretrained backbone",
         "Use either Transformers, CNN, SSM or Other",
         "Describe the tasks that is done by the paper with at least 1 tags in the ["+ ", ".join(tasks_tags)+"] list "
-        "To illustrate the concept, You MUST use the images that are provided in the input with the caption in the format ![[images_path]] \n Figure i : Caption"
+        "To illustrate the concept, You MUST use the images that are provided in the input with the caption in the format ![[path]] \n Figure i : Caption"
         "You will always use the same caption as the one in the input"
         "You will add all the figures with there caption under a # Figures title at the end of the file including images and tables.",
         "You write in Markdown format",
@@ -54,6 +54,9 @@ prompt = """ You are a helpful assistant that summarizes academic papers in comp
             3. A detailed list of new concepts, architectures, and training methods introduced, including deep explanations of each.\n\n
             4. A detailled explanation of the training stragegy (supervised, weakly-supervised, unsupervised, reinforcement learning or something else), the dataset used, the evaluation metrics and the results\n
             5. Finally, you will capture the task that is beeing solve by the paper in only sentence as well as the problems it is solving. be really specific and precise\n
-            Think step by step, but only keep a minimum draft for each thinking step, with 5 words at most. You will describe all your process to find the relevant element. You will start with the overall plan and then you will developp each step with at least 5 steps. Return the answer at the end of the response after a separator ####---####.
+
         
         """
+
+
+old_thinking = "            Think step by step, but only keep a minimum draft for each thinking step, with 5 words at most. You will describe all your process to find the relevant element. You will start with the overall plan and then you will developp each step with at least 5 steps. Return the answer at the end of the response after a separator ####---####."

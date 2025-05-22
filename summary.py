@@ -99,19 +99,17 @@ def process_single_md(
             print("No response from model")
             print(response.choices[0].message)
             exit(0)
-        analysis = response.choices[0].message.content.replace("```markdown\\n","").replace("```","")
-        
+        analysis = response.choices[0].message.content.replace("```markdown\n","").replace("```","")
+        print("analysis",analysis)
         # remove the ####---#### at the end
-        try:
-            # print(analysis.split("####---####")[0])
-            analysis = analysis.split("####---####")[1]
-            
-        except:
-            print("No separator found ")
+        # try:
+        #     print(analysis.split("####---####")[0])
+        #     analysis = analysis.split("####---####")[1]
+        #     print("analysis",analysis)
+        # except:
+        #     print("No separator found ")
         ## remove the first lines if they are empty but not after
-        
         analysis = analysis.split("\n")
-        # remove the first lines if they are empty but not after
         while len(analysis)>0 and analysis[0].strip() == "":
             analysis = analysis[1:]
         analysis = "\n".join(analysis)
