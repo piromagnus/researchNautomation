@@ -1,146 +1,151 @@
-Vault Scripts Repository
-This repository contains a collection of Python scripts for automating research workflows, paper summaries, and data synchronization.
+# Research Automation System
+
+This repository contains a comprehensive toolkit for automating academic research workflows, including PDF processing, AI-powered summarization, ArXiv scraping, and document format conversion.
+
+## 📖 Complete Documentation
+
+For comprehensive documentation including architecture, API references, and detailed component specifications, see:
+
+- **[📋 Product Requirements Document (PRD)](docs/PRD_README.md)** - Complete system overview and specifications
+- **[🏗️ System Architecture](docs/ARCHITECTURE.md)** - Technical architecture and component interactions
+- **[🔍 AiSearch Module](docs/README_aisearch.md)** - AI-powered research automation
+- **[📄 Summary Module](docs/README_summary.md)** - PDF processing and summarization
+- **[📊 ArXiv Scraper](docs/README_scrapt_arxiv.md)** - Academic paper discovery and analysis
+- **[📈 Markdown Formatting](docs/README_md_format.md)** - Data visualization utilities
+- **[📚 PDF to EPUB](docs/README_pdf_to_epub.md)** - Document format conversion
+- **[🛠️ Utility Modules](docs/README_utils.md)** - Supporting infrastructure
+
+## System Overview
+
+The Research Automation System provides four main capabilities:
+
+1. **📄 PDF Processing**: Convert PDFs to markdown and generate AI summaries
+2. **🔍 AI Research**: Enhance documents with internet research and analysis  
+3. **📊 ArXiv Discovery**: Scrape and analyze academic papers with relevance scoring
+4. **📚 Format Conversion**: Convert documents to EPUB for easy reading
 
 
-# Quick Start
+## 🚀 Quick Start
 
-## MinerU 
-MinerU is a tool designed to automate the processing of a pdf and turn it into markdown. It gets all the layouts, including images, latex formula and tables.  
- See [minerU](https://github.com/opendatalab/MinerU) for more information.
-1. Build the docker image:
+### 1. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 2. Build MinerU Docker Container
 ```bash
 docker build -t mineru:latest .
 ```
-2. Modify the ROOT_DIR in the run_minerU.sh to adapt at your architecture containing our pdf. The filepath will be relative to this root dir.
-3. Run the docker container:
+
+### 3. Configure Environment
 ```bash
-  bash run_minerU.sh <filepath> <output_dir>
-```
-
-## Install the dependencies
-```bash
-pip install -r requirements.txt
-```
-
-
-## AiSearch
-Based on [GPT-Researcher](https://github.com/assafelovic/gpt-researcher). It get the content of a markdown file and generate a report on it with the help of a LLM and search on Internet with [Tavily](https://tavily.com/).
-
-To run it
-```bash
-python aisearch.py <dir_path> <markdown_file> <report_type>
-```
-report_type is
-`"research_report" | "resource_report" | "outline_report"|  "custom_report"|  "detailed_report"|  "subtopic_report"`
-more details in [GPT-Researcher](https://github.com/assafelovic/gpt-researcher)
-
-It will append the report to the markdown file and generate a log report in the same directory under `report` folder.
-
-it can be using in Obsidian with the plugin python scripter adding a argument for the report type and passing Vault path and active file path.
-
-You must file the ai.env file (using the example file) with the API keys for Gemini (default) and Tavily.
-For small query, Ollama is used by default but if you have less memory you can try to use a smaller LLM though it will produce less accurate results.
-
-For gemini you can get free api access on [aistudio](https://aistudio.google.com/).
-
-You can change model in aisearch but take care GPT-Researcher use lanchain-llm models that can be incompatible with aisuite. (eg: google-genai vs genai)
-
-## Summary
-The summary.py script is designed to process PDF documents and Markdown files, generating summaries and extracting relevant tags. It can also compile detailed analyses of academic papers.
-I use [minerU](https://github.com/opendatalab/MinerU) to extract the pdf and then I use aisuite to generate the summary.
-
-### Setup
-1. Ensure you have the required dependencies installed. You can do this by running:
-```bash
-pip install -r requirements.txt
-```
-2. Build the Docker image for MinerU:
-```bash
-docker build -t mineru:latest .
-```
-3. Modify the .env to add you API Keys for Gemini or any other LLM you want to use.  
-   You can use the example file (.env.example) as a starting point:  
-```bash
+# Copy example configuration files
 cp .env.example .env
+cp .ai.env.example .ai.env
+
+# Edit with your API keys
+# .env: SUMMARY_MODEL, API keys for OpenAI/Gemini/Tavily
+# .ai.env: SMART_LLM, QUERY_LLM, API endpoints
 ```
-4. Modify the utils/summary_path.py to setup the path of your structure. All the paths are relative to the vault_path from the command line.
-5. Modify the utils/summary_prompt to adapt the prompt to your needs. By default there is a set of tags, tasks and rules to follow. It is mostly setup of computer vision but you can adapt it to your needs.
-6. You need to give a template for the summary. You can use the example file [demo](demo/demo_template.md) as a starting point. The first part, of the file is some metadata in an Obsidian format so you can change it if you need.
 
-### To run
+### 4. Usage Examples
 
+#### Process a PDF Paper
 ```bash
-python summary.py <vault_path> <markdown_path>
+python summary.py /path/to/vault paper.pdf
 ```
-## Scrap arxiv
-The scrapt_arxiv.py script is designed to fetch recent papers from arXiv using specific queries. It performs relevance scoring, GitHub repository detection, and data filtering to ensure the retrieved papers are relevant to your research interests.
-### Setup
-1. Ensure you have the required dependencies installed. You can do this by running:
+
+#### Generate AI Research Report
 ```bash
-pip install -r requirements.txt
+python aisearch.py /path/to/vault topic.md research_report
 ```
-2. Modify the .env file to add your API Keys for OpenAI, Anthropic, Tavily, DeepSeek, and Gemini.  
-   You can use the example file (.env.example) as a starting point:  
+
+#### Scrape ArXiv for Papers
 ```bash
-cp .env.example .env
+python scrapt_arxiv.py --config demo/demo_queries.md
 ```
-3. Modify the .env also to setup the path of your structure. As the command doesn't ask input everything is setup in the .env. You will also require a query file that will contains the differents settings of each newsletter. see [demo](demo/demo_query.md) for an example. You can add as many queries as you want using a different title as a name. The script will fetch the papers from arxiv and filter them with the queries in the config file.
 
-
-### Run
+#### Convert PDF to EPUB
 ```bash
-python scrapt_arxiv.py <nb_days>
+python pdf_to_epub.py paper.pdf
 ```
-with nb_days is the number of days you want to go back in the past. It will fetch all the papers from arxiv in the last nb_days days and filter them with the queries in the config file.
 
-# Key Files
+### 5. Integration with Obsidian
+Compatible with Obsidian Python Scripter plugin. Pass vault path and active file path as arguments.
 
-- aisearch.py  
-  Contains functionality to conduct AI research using custom prompt templates and interact with large language models (LLMs) to generate research reports.
-- summary.py  
-  Processes PDF documents and Markdown files to generate summaries, extract tags, and compile detailed analyses of academic papers.
-- md_format.py  
-  Provides functions to format Markdown reports including generating ASCII histograms and scatter plots visualizing paper score distributions.
-- scrapt_arxiv.py  
-  Fetches recent papers from arXiv using queries and performs relevance scoring, GitHub repository detection, and data filtering.
+## 📂 Key Components
 
+| File | Purpose | Description |
+|------|---------|-------------|
+| **aisearch.py** | AI Research Engine | Conducts automated research using GPT-Researcher and web search |
+| **summary.py** | PDF Processor | Converts PDFs to markdown and generates AI summaries |
+| **scrapt_arxiv.py** | ArXiv Scraper | Fetches and analyzes academic papers with relevance scoring |
+| **md_format.py** | Visualization | Creates ASCII charts and data visualizations |
+| **pdf_to_epub.py** | Format Converter | Converts PDFs to EPUB format for e-readers |
+| **utils/** | Supporting Code | I/O operations, prompts, paths, and utilities |
 
-# Environment Setup
+**📖 For detailed documentation of each component, see the [docs/](docs/) directory.**
 
-There are two environment configuration files:
+## 🔧 Configuration
 
-1. .env  
-   Contains API keys and configuration for various services (OpenAI, Anthropic, Tavily, DeepSeek, Gemini).  
-   You can use the example file (.env.example) as a starting point:  
-   cp .env.example .env  
-   **Mostly used for arxiv_scrap.py and summary.py**
-2. .ai.env  
-   Contains AI API endpoints and model configurations such as OpenAI and Ollama.  
-   Similarly, use .ai.env.example as your template:  
-   cp .ai.env.example .ai.env 
-    **Mostly used for aisearch.py**
+The system uses two main configuration files:
 
-   ## .ai.env Information
-   - OPENAI_API_KEY, OPENAI_API_BASE: API key and base URL for OpenAI services.
-   - OLLAMA_BASE_URL: Base URL for accessing Ollama API endpoints.
-   - GOOGLE_API_KEY, GEMINI_API_KEY: API keys for Google services and Gemini.
-   - FAST_LLM, SMART_LLM, STRATEGIC_LLM: Identifiers for fast, smart, and strategic LLM models.
-   - EMBEDDING: Model identifier for embedding services.
-   - TAVILY_API_KEY: API key for Tavily services.
+### .env (Primary Configuration)
+```bash
+SUMMARY_MODEL=gemini/gemini-2.0-flash
+OPENAI_API_KEY=your_key_here
+GOOGLE_API_KEY=your_key_here
+TAVILY_API_KEY=your_key_here
+```
 
-   Ensure that both .env and .ai.env are updated with the correct keys and endpoints for your environment.
+### .ai.env (AI Services)
+```bash
+SMART_LLM=google_genai:gemini-2.0-flash
+QUERY_LLM=ollama:phi4
+OLLAMA_BASE_URL=http://localhost:11434
+```
 
-# Quickstart
+## 🏗️ System Architecture
 
-- Clone the repository.
-- Install the dependencies listed in requirements.txt.
-- Install the aisuite fork with ```cd packages/aisuite && pip install .```
-<!-- - Install Ollama for Local LLM. -->
-- Update the .env and .ai.env files with your credentials.
-- Run the desired script (e.g., aisearch.py, summary.py) as needed.
+```mermaid
+graph LR
+    A[PDF] --> B[MinerU]
+    B --> C[AI Summary]
+    C --> D[EPUB]
+    
+    E[ArXiv] --> F[Relevance Scoring]
+    F --> G[Newsletter]
+    
+    H[Markdown] --> I[AI Research]
+    I --> J[Enhanced Report]
+```
 
+## 🛠️ Requirements
 
-# Additional Notes
+- **Python 3.11+**
+- **Docker** (for MinerU PDF processing)
+- **API Keys**: OpenAI, Google Gemini, or Tavily (depending on usage)
+- **Memory**: 2-8GB RAM (varies by AI model)
 
-- Each script contains its own error handling and logging.
-- You may adjust query parameters, API endpoints, or file paths depending on your use case.
+## 🎯 Use Cases
+
+- **Academic Research**: Automated paper processing and analysis
+- **Knowledge Management**: Obsidian vault integration
+- **Literature Review**: ArXiv paper discovery and summarization  
+- **E-book Creation**: PDF to EPUB conversion for reading
+- **Research Reports**: AI-enhanced topic analysis
+
+## 🤝 Contributing
+
+1. Review the [Architecture Documentation](docs/ARCHITECTURE.md)
+2. Check component-specific READMEs in [docs/](docs/)
+3. Follow existing code patterns and documentation standards
+4. Submit PRs with comprehensive documentation updates
+
+## 📄 License
+
+[Add your license information here]
+
+---
+
+**📖 For complete documentation, API references, and implementation details, see the [Product Requirements Document](docs/PRD_README.md).**
